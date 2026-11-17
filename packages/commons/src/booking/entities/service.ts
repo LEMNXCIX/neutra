@@ -1,0 +1,17 @@
+import type { Category } from "../../catalog/entities/category.js";
+
+/** A service offering in the booking system. */
+export interface Service {
+  id: string;
+  name: string;
+  description: string | null;
+  duration: number; // Duration in minutes
+  price: number;
+  categoryId: string | null;
+  category?: Category;
+  active: boolean;
+  tenantId: string;
+  tenant?: { id: string; name: string; slug: string };
+  createdAt: Date;
+  updatedAt: Date;
+}
