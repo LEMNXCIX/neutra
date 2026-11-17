@@ -27,10 +27,11 @@ services:
 
   cms:
     build:
-      # Monorepo root is the build context; the CMS Dockerfile lives under
-      # apps/cms. Run with: docker compose -f apps/api/docker-compose.prod.yml up
-      context: ../../
-      dockerfile: apps/cms/Dockerfile
+      # The imported CMS Dockerfile expects the CMS root as build context
+      # (COPY package.json / COPY . .). Run with:
+      # docker compose -f apps/api/docker-compose.prod.yml up
+      context: ../cms
+      dockerfile: Dockerfile
     environment:
       - NODE_ENV=production
       - DATABASE_CLIENT=postgres
