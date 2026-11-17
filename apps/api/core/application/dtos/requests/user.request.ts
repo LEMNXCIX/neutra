@@ -1,11 +1,9 @@
-import {
-    IsBoolean,
-    IsEmail,
-    IsNotEmpty,
-    IsOptional,
-    IsString,
-} from "class-validator";
-
+/**
+ * Zod-backed shim: the former decorator-based DTO classes here were
+ * replaced by inferred types from `@neutra/commons`. The internal
+ * `XDTO` interfaces are kept verbatim; routes now consume the shared
+ * `<Dto>Schema` values directly.
+ */
 export interface CreateUserDTO {
     name: string;
     email: string;
@@ -62,38 +60,10 @@ export interface ProviderDataDTO {
 }
 
 /** The six admin-safe columns, as a validator class for `PUT /api/users/:id`. */
-export class UpdateUserDto implements UpdateUserDTO {
-    @IsOptional()
-    @IsString()
-    name?: string;
-
-    @IsOptional()
-    @IsEmail()
-    email?: string;
-
-    @IsOptional()
-    @IsString()
-    profilePic?: string;
-
-    @IsOptional()
-    @IsString()
-    phone?: string;
-
-    @IsOptional()
-    @IsString()
-    pushToken?: string;
-
-    @IsOptional()
-    @IsBoolean()
-    active?: boolean;
-}
+export type UpdateUserDto = import("@neutra/commons").UpdateUserDto;
 
 /** The body of `PUT /api/users/:id/role`, read by `AssignRoleToUserUseCase`. */
-export class AssignRoleDto implements AssignRoleDTO {
-    @IsString()
-    @IsNotEmpty()
-    roleId!: string;
-}
+export type AssignRoleDto = import("@neutra/commons").AssignRoleDto;
 
 // `CreateUserDTO` and `ProviderDataDTO` have no class: `UserController.create`
 // and `UserController.getOrCreateByProvider` are not mounted on any route, so

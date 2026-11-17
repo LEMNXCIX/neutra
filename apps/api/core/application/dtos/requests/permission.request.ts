@@ -1,5 +1,9 @@
-import { IsBoolean, IsNotEmpty, IsOptional, IsString } from "class-validator";
-
+/**
+ * Zod-backed shim: the former decorator-based DTO classes here were
+ * replaced by inferred types from `@neutra/commons`. The internal
+ * `XDTO` interfaces are kept verbatim; routes now consume the shared
+ * `<Dto>Schema` values directly.
+ */
 export interface CreatePermissionDTO {
     name: string;
     description?: string;
@@ -13,30 +17,6 @@ export interface UpdatePermissionDTO {
 }
 
 /** The three fields of `PermissionCreateData`, the repository's own allowlist. */
-export class CreatePermissionDto implements CreatePermissionDTO {
-    @IsString()
-    @IsNotEmpty()
-    name!: string;
+export type CreatePermissionDto = import("@neutra/commons").CreatePermissionDto;
 
-    @IsOptional()
-    @IsString()
-    description?: string;
-
-    @IsOptional()
-    @IsBoolean()
-    active?: boolean;
-}
-
-export class UpdatePermissionDto implements UpdatePermissionDTO {
-    @IsOptional()
-    @IsString()
-    name?: string;
-
-    @IsOptional()
-    @IsString()
-    description?: string;
-
-    @IsOptional()
-    @IsBoolean()
-    active?: boolean;
-}
+export type UpdatePermissionDto = import("@neutra/commons").UpdatePermissionDto;

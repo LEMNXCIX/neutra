@@ -1,9 +1,7 @@
+import { AssignRoleDtoSchema, UpdateUserDtoSchema } from "@neutra/commons";
 import type { RequestHandler } from "express";
 import { type Application, type Request, type Response, Router } from "express";
-import {
-    AssignRoleDto,
-    UpdateUserDto,
-} from "@/core/application/dtos/requests/user.request";
+
 import type { UserController } from "@/interface-adapters/controllers/user.controller";
 import { requirePermission } from "@/middleware/authorization.middleware";
 import { validateDto } from "@/middleware/validation.middleware";
@@ -201,7 +199,7 @@ function users(
         "/:id",
         authenticate,
         requirePermission("users:manage"),
-        validateDto(UpdateUserDto),
+        validateDto(UpdateUserDtoSchema),
         userController.update,
     );
 
@@ -243,7 +241,7 @@ function users(
         "/:id/role",
         authenticate,
         requirePermission("users:manage"),
-        validateDto(AssignRoleDto),
+        validateDto(AssignRoleDtoSchema),
         userController.assignRole,
     );
 

@@ -1,4 +1,9 @@
-import { IsIn, IsOptional, IsString } from "class-validator";
+/**
+ * Zod-backed shim: the former decorator-based DTO classes here were
+ * replaced by inferred types from `@neutra/commons`. The internal
+ * `XDTO` interfaces are kept verbatim; routes now consume the shared
+ * `<Dto>Schema` values directly.
+ */
 import type { OrderStatus } from "@/core/entities/order.entity";
 
 export interface CreateOrderDTO {
@@ -34,28 +39,11 @@ const ORDER_STATUSES = ["PENDIENTE", "PAGADO", "ENVIADO", "ENTREGADO"] as const;
  * therefore does not implement that interface: it describes the wire, and the
  * wire carries one field.
  */
-export class CreateOrderDto {
-    @IsOptional()
-    @IsString()
-    couponCode?: string;
-}
+export type CreateOrderDto = import("@neutra/commons").CreateOrderDto;
 
 /** The body of `PUT /api/order/:id`, which is what `UpdateOrderUseCase` reads. */
-export class UpdateOrderDto implements UpdateOrderDTO {
-    @IsOptional()
-    @IsIn(ORDER_STATUSES)
-    status?: OrderStatus;
-
-    @IsOptional()
-    @IsString()
-    trackingNumber?: string;
-}
+export type UpdateOrderDto = import("@neutra/commons").UpdateOrderDto;
 
 /** The body of `PUT /api/order/changeStatus`. */
-export class ChangeOrderStatusDto implements ChangeOrderStatusDTO {
-    @IsString()
-    idOrder!: string;
-
-    @IsIn(ORDER_STATUSES)
-    status!: OrderStatus;
-}
+export type ChangeOrderStatusDto =
+    import("@neutra/commons").ChangeOrderStatusDto;

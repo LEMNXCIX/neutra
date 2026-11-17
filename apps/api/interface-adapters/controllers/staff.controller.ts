@@ -1,3 +1,4 @@
+import { AuthErrorCodes } from "@neutra/commons";
 import type { Request, Response } from "express";
 import type { AssignStaffServiceUseCase } from "@/core/application/booking/assign-staff-service.use-case";
 import type { CreateStaffUseCase } from "@/core/application/booking/create-staff.use-case";
@@ -17,7 +18,6 @@ import { StaffResponse } from "@/core/application/dtos/responses/staff/staff.res
 import { present } from "@/core/utils/use-case-result";
 import { currentUser, tenantIdOf } from "@/helpers/request-context.helpers";
 import { AppError } from "@/types/app-error";
-import { AuthErrorCodes } from "@neutra/commons";
 
 export class StaffController {
     constructor(
@@ -45,7 +45,7 @@ export class StaffController {
         const { activeOnly: raw } = (req.validatedQuery ??
             {}) as ActiveOnlyQueryDto;
         // Historical default for services/staff is `true` (see Swagger).
-        const activeOnly = raw !== "false";
+        const activeOnly = raw !== false;
         const result = await this.getStaffUseCase.execute(tenantId, activeOnly);
         return res
             .status(200)

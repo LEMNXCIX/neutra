@@ -1,5 +1,8 @@
-import { plainToInstance } from "class-transformer";
-import { validate } from "class-validator";
+import {
+    AuthErrorCodes,
+    CreateLoyaltyCampaignDtoSchema,
+    UpdateLoyaltyCampaignDtoSchema,
+} from "@neutra/commons";
 import express, {
     type Application,
     type NextFunction,
@@ -8,11 +11,6 @@ import express, {
     type Router,
 } from "express";
 import request from "supertest";
-import {
-    CreateLoyaltyCampaignDto,
-    LoyaltyRewardDefinitionDto,
-    UpdateLoyaltyCampaignDto,
-} from "@/core/application/dtos/requests/loyalty.request";
 import { GetAllTenantsLoyaltyOverviewUseCase } from "@/core/application/loyalty/get-all-tenants-loyalty-overview.use-case";
 import { ROLE_CONSTANTS } from "@/core/domain/constants";
 import { MAX_LOYALTY_PRISMA_INT } from "@/core/domain/loyalty/loyalty.policy";
@@ -33,7 +31,6 @@ import {
     requireConcreteTenantContext,
     requireTenantType,
 } from "@/middleware/tenant-feature.middleware";
-import { AuthErrorCodes } from "@neutra/commons";
 
 jest.mock("@/middleware/tenant-feature.middleware", () => ({
     requireConcreteTenantContext: jest.fn(
@@ -517,69 +514,68 @@ describe("loyalty campaign HTTP API", () => {
     });
 });
 
-describe("loyalty campaign request DTO validation", () => {
-    const dtoBuilders = [
-        [
-            "create",
-            (data: Record<string, unknown>) =>
-                plainToInstance(CreateLoyaltyCampaignDto, data),
-        ],
-        [
-            "update",
-            (data: Record<string, unknown>) =>
-                plainToInstance(UpdateLoyaltyCampaignDto, data),
-        ],
+describe("loyalty campaign request schema validation", () => {
+    const schemas = [
+        ["create", CreateLoyaltyCampaignDtoSchema],
+        ["update", UpdateLoyaltyCampaignDtoSchema],
     ] as const;
 
-    test.each(dtoBuilders)(
-        "%s transforms a valid reward without modifying global Reflect",
-        (_label, build) => {
+    test.each(schemas)(
+        "%s parses a valid nested reward without modifying global Reflect",
+        (_label, schema) => {
             const reflect = Reflect as typeof Reflect & {
                 getMetadata?: unknown;
             };
             const getMetadata = reflect.getMetadata;
-            const dto = build({ reward: campaignRequest().reward });
+            const parsed = schema.safeParse(campaignRequest());
 
-            expect(dto.reward).toBeInstanceOf(LoyaltyRewardDefinitionDto);
+            expect(parsed.success).toBe(true);
+            if (parsed.success) {
+                expect(parsed.data.reward).toEqual(
+                    expect.objectContaining({
+                        type: CouponType.PERCENT,
+                        value: 10,
+                    }),
+                );
+            }
             expect(reflect.getMetadata).toBe(getMetadata);
             expect(getMetadata).toBeUndefined();
         },
     );
 
-    test.each(dtoBuilders)(
+    test.each(schemas)(
         "%s rejects invalid fields inside the nested reward",
-        async (_label, build) => {
-            const errors = await validate(
-                build({ reward: { type: CouponType.PERCENT } }),
-            );
+        (_label, schema) => {
+            const result = schema.safeParse({
+                reward: { type: CouponType.PERCENT },
+            });
 
-            expect(errors).toEqual(
-                expect.arrayContaining([
-                    expect.objectContaining({
-                        property: "reward",
-                        children: expect.arrayContaining([
-                            expect.objectContaining({ property: "value" }),
-                        ]),
-                    }),
-                ]),
-            );
+            expect(result.success).toBe(false);
+            if (!result.success) {
+                expect(
+                    result.error.issues.map((issue) => issue.path.join(".")),
+                ).toEqual(expect.arrayContaining(["reward.value"]));
+            }
         },
     );
 
-    test.each(dtoBuilders)(
+    test.each(schemas)(
         "caps %s integer fields at the Prisma Int maximum",
-        async (_label, build) => {
-            const errors = await validate(
-                build({
-                    ...campaignRequest(),
-                    rewardValidDays: MAX_LOYALTY_PRISMA_INT + 1,
-                    maxClaims: MAX_LOYALTY_PRISMA_INT + 1,
-                }),
-            );
+        (_label, schema) => {
+            const result = schema.safeParse({
+                ...campaignRequest(),
+                rewardValidDays: MAX_LOYALTY_PRISMA_INT + 1,
+                maxClaims: MAX_LOYALTY_PRISMA_INT + 1,
+            });
 
-            expect(errors.map((error) => error.property)).toEqual(
-                expect.arrayContaining(["rewardValidDays", "maxClaims"]),
-            );
+            expect(result.success).toBe(false);
+            if (!result.success) {
+                expect(
+                    result.error.issues.map((issue) => issue.path.join(".")),
+                ).toEqual(
+                    expect.arrayContaining(["rewardValidDays", "maxClaims"]),
+                );
+            }
         },
     );
 });

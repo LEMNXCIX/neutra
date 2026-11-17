@@ -1,10 +1,11 @@
+import {
+    CreatePermissionDtoSchema,
+    PagedSearchQueryDtoSchema,
+    UpdatePermissionDtoSchema,
+} from "@neutra/commons";
 import type { RequestHandler } from "express";
 import { type Application, Router } from "express";
-import { PagedSearchQueryDto } from "@/core/application/dtos/requests/list-query.dto";
-import {
-    CreatePermissionDto,
-    UpdatePermissionDto,
-} from "@/core/application/dtos/requests/permission.request";
+
 import type { PermissionController } from "@/interface-adapters/controllers/permission.controller";
 import { requirePermission } from "@/middleware/authorization.middleware";
 import {
@@ -69,7 +70,7 @@ function permissionRoutes(
         "/",
         authenticate,
         requirePermission("permissions:read"),
-        validateQueryDto(PagedSearchQueryDto),
+        validateQueryDto(PagedSearchQueryDtoSchema),
         permissionController.getAll,
     );
 
@@ -135,7 +136,7 @@ function permissionRoutes(
         "/",
         authenticate,
         requirePermission("permissions:write"),
-        validateDto(CreatePermissionDto),
+        validateDto(CreatePermissionDtoSchema),
         permissionController.create,
     );
 
@@ -178,7 +179,7 @@ function permissionRoutes(
         "/:id",
         authenticate,
         requirePermission("permissions:write"),
-        validateDto(UpdatePermissionDto),
+        validateDto(UpdatePermissionDtoSchema),
         permissionController.update,
     );
 

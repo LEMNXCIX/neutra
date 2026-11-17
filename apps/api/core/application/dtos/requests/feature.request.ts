@@ -1,5 +1,9 @@
-import { IsNumber, IsOptional, IsString, Min } from "class-validator";
-
+/**
+ * Zod-backed shim: the former decorator-based DTO classes here were
+ * replaced by inferred types from `@neutra/commons`. The internal
+ * `XDTO` interfaces are kept verbatim; routes now consume the shared
+ * `<Dto>Schema` values directly.
+ */
 export interface CreateFeatureDTO {
     key: string;
     name: string;
@@ -21,42 +25,6 @@ export interface UpdateFeatureDTO {
  * it, because `key` is the join key every `TenantFeature` row and every stored
  * `config.features` map is written by.
  */
-export class CreateFeatureDto implements CreateFeatureDTO {
-    @IsString()
-    key!: string;
+export type CreateFeatureDto = import("@neutra/commons").CreateFeatureDto;
 
-    @IsString()
-    name!: string;
-
-    @IsOptional()
-    @IsString()
-    description?: string;
-
-    @IsOptional()
-    @IsString()
-    category?: string;
-
-    @IsOptional()
-    @IsNumber()
-    @Min(0)
-    price?: number;
-}
-
-export class UpdateFeatureDto implements UpdateFeatureDTO {
-    @IsOptional()
-    @IsString()
-    name?: string;
-
-    @IsOptional()
-    @IsString()
-    description?: string;
-
-    @IsOptional()
-    @IsString()
-    category?: string;
-
-    @IsOptional()
-    @IsNumber()
-    @Min(0)
-    price?: number;
-}
+export type UpdateFeatureDto = import("@neutra/commons").UpdateFeatureDto;

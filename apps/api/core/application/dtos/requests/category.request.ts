@@ -1,11 +1,10 @@
-import {
-    IsBoolean,
-    IsEnum,
-    IsNotEmpty,
-    IsOptional,
-    IsString,
-} from "class-validator";
-import { CategoryType } from "@/core/entities/category.entity";
+/**
+ * Zod-backed shim: the former decorator-based DTO classes here were
+ * replaced by inferred types from `@neutra/commons`. The internal
+ * `XDTO` interfaces are kept verbatim; routes now consume the shared
+ * `<Dto>Schema` values directly.
+ */
+import type { CategoryType } from "@/core/entities/category.entity";
 
 export interface CreateCategoryDTO {
     name: string;
@@ -22,38 +21,6 @@ export interface UpdateCategoryDTO {
 }
 
 /** The four columns `PrismaCategoryRepository.create` copies. */
-export class CreateCategoryDto implements CreateCategoryDTO {
-    @IsString()
-    @IsNotEmpty()
-    name!: string;
+export type CreateCategoryDto = import("@neutra/commons").CreateCategoryDto;
 
-    @IsOptional()
-    @IsString()
-    description?: string;
-
-    @IsOptional()
-    @IsEnum(CategoryType)
-    type?: CategoryType;
-
-    @IsOptional()
-    @IsBoolean()
-    active?: boolean;
-}
-
-export class UpdateCategoryDto implements UpdateCategoryDTO {
-    @IsOptional()
-    @IsString()
-    name?: string;
-
-    @IsOptional()
-    @IsString()
-    description?: string;
-
-    @IsOptional()
-    @IsEnum(CategoryType)
-    type?: CategoryType;
-
-    @IsOptional()
-    @IsBoolean()
-    active?: boolean;
-}
+export type UpdateCategoryDto = import("@neutra/commons").UpdateCategoryDto;

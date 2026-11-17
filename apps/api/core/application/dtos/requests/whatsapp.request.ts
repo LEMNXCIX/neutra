@@ -1,13 +1,9 @@
-import { plainToInstance, Transform } from "class-transformer";
-import {
-    IsArray,
-    IsBoolean,
-    IsObject,
-    IsOptional,
-    IsString,
-    MinLength,
-    ValidateNested,
-} from "class-validator";
+/**
+ * Zod-backed shim: the former decorator-based DTO classes here were
+ * replaced by inferred types from `@neutra/commons`. The internal
+ * `XDTO` interfaces are kept verbatim; routes now consume the shared
+ * `<Dto>Schema` values directly.
+ */
 import type {
     BotConfig,
     WhatsAppTemplate,
@@ -36,42 +32,8 @@ export interface SendNotificationDTO {
     }>;
 }
 
-export class ConfigureWhatsAppDto {
-    @IsString()
-    @MinLength(1, { message: "phoneNumberId is required" })
-    phoneNumberId!: string;
-
-    @IsOptional()
-    @IsString()
-    businessAccountId?: string;
-
-    @IsOptional()
-    @IsString()
-    @MinLength(10)
-    accessToken?: string;
-
-    @IsOptional()
-    @IsString()
-    webhookVerifyToken?: string;
-
-    @IsOptional()
-    @IsBoolean()
-    enabled?: boolean;
-
-    @IsOptional()
-    @IsBoolean()
-    notificationsEnabled?: boolean;
-
-    @IsOptional()
-    @IsBoolean()
-    botEnabled?: boolean;
-
-    @IsOptional()
-    templates?: WhatsAppTemplate[];
-
-    @IsOptional()
-    botConfig?: BotConfig;
-}
+export type ConfigureWhatsAppDto =
+    import("@neutra/commons").ConfigureWhatsAppDto;
 
 /**
  * One element of a template's `components`, validated through the same
@@ -79,15 +41,8 @@ export class ConfigureWhatsAppDto {
  * it a `components` array of strings would reach
  * `IWhatsAppService.sendTemplateMessage` and fail at the provider.
  */
-export class WhatsAppComponentDto {
-    @IsString()
-    type!: string;
-
-    @IsOptional()
-    @IsArray()
-    @IsObject({ each: true })
-    parameters?: Array<Record<string, unknown>>;
-}
+export type WhatsAppComponentDto =
+    import("@neutra/commons").WhatsAppComponentDto;
 
 /**
  * The body of `POST /api/whatsapp/send-template`.
@@ -98,27 +53,4 @@ export class WhatsAppComponentDto {
  * therefore does not implement `SendNotificationDTO`, which still requires
  * `tenantId` because that is what the use case takes.
  */
-export class SendNotificationDto {
-    @IsString()
-    to!: string;
-
-    @IsString()
-    templateName!: string;
-
-    @IsOptional()
-    @IsString()
-    languageCode?: string;
-
-    @IsOptional()
-    @IsArray()
-    @ValidateNested({ each: true })
-    @Transform(
-        ({ value }) =>
-            Array.isArray(value) &&
-            value.map((entry: unknown) =>
-                plainToInstance(WhatsAppComponentDto, entry),
-            ),
-        { toClassOnly: true },
-    )
-    components?: WhatsAppComponentDto[];
-}
+export type SendNotificationDto = import("@neutra/commons").SendNotificationDto;

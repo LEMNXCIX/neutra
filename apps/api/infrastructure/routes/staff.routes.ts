@@ -1,12 +1,13 @@
+import {
+    ActiveOnlyQueryDtoSchema,
+    AssignStaffServiceDtoSchema,
+    CreateStaffDtoSchema,
+    SyncStaffServicesDtoSchema,
+    UpdateStaffDtoSchema,
+} from "@neutra/commons";
 import type { RequestHandler } from "express";
 import { type Application, Router } from "express";
-import { ActiveOnlyQueryDto } from "@/core/application/dtos/requests/list-query.dto";
-import {
-    AssignStaffServiceDto,
-    CreateStaffDto,
-    SyncStaffServicesDto,
-    UpdateStaffDto,
-} from "@/core/application/dtos/requests/staff.request";
+
 import type { StaffController } from "@/interface-adapters/controllers/staff.controller";
 import { requirePermission } from "@/middleware/authorization.middleware";
 import { resolveSuperAdminTenant } from "@/middleware/super-admin-tenant-resolver.middleware";
@@ -125,7 +126,7 @@ function staff(
         requireTenantType("BOOKING", "HYBRID"),
         authenticate,
         requirePermission("staff:write"),
-        validateDto(CreateStaffDto),
+        validateDto(CreateStaffDtoSchema),
         (req, res) => staffController.create(req, res),
     );
 
@@ -161,7 +162,7 @@ function staff(
         requireTenantType("BOOKING", "HYBRID"),
         authenticate,
         resolveSuperAdminTenant,
-        validateQueryDto(ActiveOnlyQueryDto),
+        validateQueryDto(ActiveOnlyQueryDtoSchema),
         (req, res) => staffController.getAll(req, res),
     );
 
@@ -203,7 +204,7 @@ function staff(
         requireTenantType("BOOKING", "HYBRID"),
         authenticate,
         requirePermission("staff:write"),
-        validateDto(AssignStaffServiceDto),
+        validateDto(AssignStaffServiceDtoSchema),
         (req, res) => staffController.assignService(req, res),
     );
 
@@ -243,7 +244,7 @@ function staff(
         requireTenantType("BOOKING", "HYBRID"),
         authenticate,
         requirePermission("staff:write"),
-        validateDto(SyncStaffServicesDto),
+        validateDto(SyncStaffServicesDtoSchema),
         (req, res) => staffController.syncServices(req, res),
     );
 
@@ -287,7 +288,7 @@ function staff(
         requireTenantType("BOOKING", "HYBRID"),
         authenticate,
         requirePermission("staff:write"),
-        validateDto(UpdateStaffDto),
+        validateDto(UpdateStaffDtoSchema),
         (req, res) => staffController.update(req, res),
     );
 

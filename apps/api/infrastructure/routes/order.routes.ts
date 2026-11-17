@@ -1,15 +1,14 @@
+import {
+    ChangeOrderStatusDtoSchema,
+    CreateOrderDtoSchema,
+    DatedQueryDtoSchema,
+    OrderListQueryDtoSchema,
+    OrderStatusQueryDtoSchema,
+    UpdateOrderDtoSchema,
+} from "@neutra/commons";
 import type { RequestHandler } from "express";
 import { type Application, Router } from "express";
-import {
-    DatedQueryDto,
-    OrderListQueryDto,
-    OrderStatusQueryDto,
-} from "@/core/application/dtos/requests/list-query.dto";
-import {
-    ChangeOrderStatusDto,
-    CreateOrderDto,
-    UpdateOrderDto,
-} from "@/core/application/dtos/requests/order.request";
+
 import type { OrderController } from "@/interface-adapters/controllers/order.controller";
 import { requirePermission } from "@/middleware/authorization.middleware";
 import { requireTenantType } from "@/middleware/tenant-feature.middleware";
@@ -114,7 +113,7 @@ function order(
         "/",
         requireTenantType("STORE", "HYBRID"),
         authenticate,
-        validateDto(CreateOrderDto),
+        validateDto(CreateOrderDtoSchema),
         orderController.create,
     );
 
@@ -183,7 +182,7 @@ function order(
         "/getOrderByUser",
         requireTenantType("STORE", "HYBRID"),
         authenticate,
-        validateQueryDto(OrderStatusQueryDto),
+        validateQueryDto(OrderStatusQueryDtoSchema),
         orderController.getByUser,
     );
 
@@ -229,7 +228,7 @@ function order(
         requireTenantType("STORE", "HYBRID"),
         authenticate,
         requirePermission("stats:read"),
-        validateQueryDto(DatedQueryDto),
+        validateQueryDto(DatedQueryDtoSchema),
         orderController.getStats,
     );
 
@@ -258,7 +257,7 @@ function order(
         requireTenantType("STORE", "HYBRID"),
         authenticate,
         requirePermission("orders:read"),
-        validateQueryDto(OrderListQueryDto),
+        validateQueryDto(OrderListQueryDtoSchema),
         orderController.getAll,
     );
 
@@ -281,7 +280,7 @@ function order(
         requireTenantType("STORE", "HYBRID"),
         authenticate,
         requirePermission("orders:read"),
-        validateQueryDto(OrderListQueryDto),
+        validateQueryDto(OrderListQueryDtoSchema),
         orderController.getAll,
     ); // Alias
 
@@ -318,7 +317,7 @@ function order(
         requireTenantType("STORE", "HYBRID"),
         authenticate,
         requirePermission("orders:write"),
-        validateDto(ChangeOrderStatusDto),
+        validateDto(ChangeOrderStatusDtoSchema),
         orderController.changeStatus,
     );
 
@@ -358,7 +357,7 @@ function order(
         requireTenantType("STORE", "HYBRID"),
         authenticate,
         requirePermission("orders:write"),
-        validateDto(UpdateOrderDto),
+        validateDto(UpdateOrderDtoSchema),
         orderController.update,
     );
 

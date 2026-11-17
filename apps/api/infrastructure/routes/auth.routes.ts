@@ -1,16 +1,15 @@
 /// <reference path="../../types/request-dto.ts" />
-
+import {
+    ForgotPasswordDtoSchema,
+    ResetPasswordDtoSchema,
+} from "@neutra/commons";
 import type { RequestHandler } from "express";
 import { type Application, Router } from "express";
 import passport from "passport";
-import {
-    ForgotPasswordDto,
-    ResetPasswordDto,
-} from "@/core/application/dtos/requests/auth.request";
 import type { AuthController } from "@/interface-adapters/controllers/auth.controller";
 import { authLimiter } from "@/middleware/rateLimit.middleware";
 import { validateDto } from "@/middleware/validation.middleware";
-import { CreateUserDto, LoginDto } from "@/types/request-dto";
+import { CreateUserDtoSchema, LoginDtoSchema } from "@/types/request-dto";
 
 function auth(
     app: Application,
@@ -49,7 +48,7 @@ function auth(
     router.post(
         "/login",
         authLimiter,
-        validateDto(LoginDto),
+        validateDto(LoginDtoSchema),
         authController.login,
     );
 
@@ -74,7 +73,7 @@ function auth(
     router.post(
         "/signup",
         authLimiter,
-        validateDto(CreateUserDto),
+        validateDto(CreateUserDtoSchema),
         authController.signup,
     );
 
@@ -161,7 +160,7 @@ function auth(
     router.post(
         "/forgot-password",
         authLimiter,
-        validateDto(ForgotPasswordDto),
+        validateDto(ForgotPasswordDtoSchema),
         authController.forgotPassword,
     );
 
@@ -185,7 +184,7 @@ function auth(
      */
     router.post(
         "/reset-password",
-        validateDto(ResetPasswordDto),
+        validateDto(ResetPasswordDtoSchema),
         authController.resetPassword,
     );
 

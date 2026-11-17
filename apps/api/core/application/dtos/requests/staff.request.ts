@@ -1,13 +1,9 @@
-import {
-    IsArray,
-    IsBoolean,
-    IsEmail,
-    IsNotEmpty,
-    IsObject,
-    IsOptional,
-    IsString,
-} from "class-validator";
-
+/**
+ * Zod-backed shim: the former decorator-based DTO classes here were
+ * replaced by inferred types from `@neutra/commons`. The internal
+ * `XDTO` interfaces are kept verbatim; routes now consume the shared
+ * `<Dto>Schema` values directly.
+ */
 export interface WorkingHours {
     [day: string]: {
         start: string;
@@ -51,88 +47,18 @@ export interface SyncStaffServicesDTO {
  * constraint at the edge is "is an object", and the day-level shape is what
  * `working-hours.ts` already resolves and reports on.
  */
-export class CreateStaffDto implements CreateStaffDTO {
-    @IsString()
-    @IsNotEmpty()
-    name!: string;
+export type CreateStaffDto = import("@neutra/commons").CreateStaffDto;
 
-    @IsOptional()
-    @IsString()
-    userId?: string;
-
-    @IsOptional()
-    @IsEmail()
-    email?: string;
-
-    @IsOptional()
-    @IsString()
-    phone?: string;
-
-    @IsOptional()
-    @IsString()
-    avatar?: string;
-
-    @IsOptional()
-    @IsString()
-    bio?: string;
-
-    @IsOptional()
-    @IsBoolean()
-    active?: boolean;
-
-    @IsOptional()
-    @IsObject()
-    workingHours?: WorkingHours;
-}
-
-export class UpdateStaffDto implements UpdateStaffDTO {
-    @IsOptional()
-    @IsString()
-    userId?: string;
-
-    @IsOptional()
-    @IsString()
-    name?: string;
-
-    @IsOptional()
-    @IsEmail()
-    email?: string;
-
-    @IsOptional()
-    @IsString()
-    phone?: string;
-
-    @IsOptional()
-    @IsString()
-    avatar?: string;
-
-    @IsOptional()
-    @IsString()
-    bio?: string;
-
-    @IsOptional()
-    @IsBoolean()
-    active?: boolean;
-
-    @IsOptional()
-    @IsObject()
-    workingHours?: WorkingHours;
-}
+export type UpdateStaffDto = import("@neutra/commons").UpdateStaffDto;
 
 /** The body of `POST /api/staff/:staffId/services`. */
-export class AssignStaffServiceDto implements AssignStaffServiceDTO {
-    @IsString()
-    @IsNotEmpty()
-    serviceId!: string;
-}
+export type AssignStaffServiceDto =
+    import("@neutra/commons").AssignStaffServiceDto;
 
 /**
  * The body of `PUT /api/staff/:staffId/services`. An empty list is meaningful
  * here: `SyncStaffServicesUseCase` treats it as "detach every service", so it
  * is asserted as an array and not as a non-empty array.
  */
-export class SyncStaffServicesDto implements SyncStaffServicesDTO {
-    @IsArray()
-    @IsString({ each: true })
-    serviceIds!: string[];
-}
+export type SyncStaffServicesDto =
+    import("@neutra/commons").SyncStaffServicesDto;

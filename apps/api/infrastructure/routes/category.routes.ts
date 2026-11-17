@@ -1,10 +1,11 @@
+import {
+    CategoryListQueryDtoSchema,
+    CreateCategoryDtoSchema,
+    UpdateCategoryDtoSchema,
+} from "@neutra/commons";
 import type { RequestHandler } from "express";
 import { type Application, Router } from "express";
-import {
-    CreateCategoryDto,
-    UpdateCategoryDto,
-} from "@/core/application/dtos/requests/category.request";
-import { CategoryListQueryDto } from "@/core/application/dtos/requests/list-query.dto";
+
 import type { CategoryController } from "@/interface-adapters/controllers/category.controller";
 import { requirePermission } from "@/middleware/authorization.middleware";
 import { resolveSuperAdminTenant } from "@/middleware/super-admin-tenant-resolver.middleware";
@@ -77,7 +78,7 @@ function categoryRoutes(
         "/",
         optionalAuthenticate,
         resolveSuperAdminTenant,
-        validateQueryDto(CategoryListQueryDto),
+        validateQueryDto(CategoryListQueryDtoSchema),
         categoryController.getAll,
     );
 
@@ -162,7 +163,7 @@ function categoryRoutes(
         "/",
         authenticate,
         requirePermission("categories:write"),
-        validateDto(CreateCategoryDto),
+        validateDto(CreateCategoryDtoSchema),
         categoryController.create,
     );
 
@@ -207,7 +208,7 @@ function categoryRoutes(
         "/:id",
         authenticate,
         requirePermission("categories:write"),
-        validateDto(UpdateCategoryDto),
+        validateDto(UpdateCategoryDtoSchema),
         categoryController.update,
     );
 

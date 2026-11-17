@@ -1,9 +1,7 @@
+import { AddToCartDtoSchema, RemoveFromCartDtoSchema } from "@neutra/commons";
 import type { RequestHandler } from "express";
 import { type Application, type Request, type Response, Router } from "express";
-import {
-    AddToCartDto,
-    RemoveFromCartDto,
-} from "@/core/application/dtos/requests/cart.request";
+
 import type { CartController } from "@/interface-adapters/controllers/cart.controller";
 import { requirePermission } from "@/middleware/authorization.middleware";
 import { validateDto } from "@/middleware/validation.middleware";
@@ -123,7 +121,7 @@ function cart(
         "/add",
         authenticate,
         requirePermission("cart:write"),
-        validateDto(AddToCartDto),
+        validateDto(AddToCartDtoSchema),
         cartController.addToCart,
     );
 
@@ -156,7 +154,7 @@ function cart(
         "/remove",
         authenticate,
         requirePermission("cart:write"),
-        validateDto(RemoveFromCartDto),
+        validateDto(RemoveFromCartDtoSchema),
         cartController.removeFromCart,
     );
 

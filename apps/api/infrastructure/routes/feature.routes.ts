@@ -1,9 +1,10 @@
+import {
+    CreateFeatureDtoSchema,
+    UpdateFeatureDtoSchema,
+} from "@neutra/commons";
 import type { RequestHandler } from "express";
 import { type Application, Router } from "express";
-import {
-    CreateFeatureDto,
-    UpdateFeatureDto,
-} from "@/core/application/dtos/requests/feature.request";
+
 import type { FeatureController } from "@/interface-adapters/controllers/feature.controller";
 import {
     requirePermission,
@@ -123,7 +124,7 @@ function featureRoutes(
         authenticate,
         requirePermission("features:write"),
         requireSuperAdmin,
-        validateDto(CreateFeatureDto),
+        validateDto(CreateFeatureDtoSchema),
         featureController.create,
     );
 
@@ -167,7 +168,7 @@ function featureRoutes(
         authenticate,
         requirePermission("features:write"),
         requireSuperAdmin,
-        validateDto(UpdateFeatureDto),
+        validateDto(UpdateFeatureDtoSchema),
         featureController.update,
     );
 

@@ -9,12 +9,12 @@ type GoldenEntry = { status: number; errors: unknown };
 
 // Read at module load: while the snapshot has not been recorded this throws
 // ENOENT, which is the intended RED state before `record-validation-golden.ts`
-// is run against the untouched class-validator middleware.
+// is run against the untouched legacy validation middleware.
 const snapshot: Record<string, GoldenEntry> = JSON.parse(
     fs.readFileSync(SNAPSHOT_PATH, "utf8"),
 );
 
-describe("validation golden responses (class-validator baseline)", () => {
+describe("validation golden responses (frozen legacy baseline)", () => {
     test("snapshot contains exactly one entry per matrix case", () => {
         expect(Object.keys(snapshot).sort()).toEqual(
             GOLDEN_CASES.map((testCase) => testCase.id).sort(),

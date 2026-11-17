@@ -1,10 +1,11 @@
+import {
+    ActiveOnlyQueryDtoSchema,
+    CreateSlideshowDtoSchema,
+    UpdateSlideshowDtoSchema,
+} from "@neutra/commons";
 import type { RequestHandler } from "express";
 import { type Application, Router } from "express";
-import { ActiveOnlyQueryDto } from "@/core/application/dtos/requests/list-query.dto";
-import {
-    CreateSlideshowDto,
-    UpdateSlideshowDto,
-} from "@/core/application/dtos/requests/slide.request";
+
 import type { SlideController } from "@/interface-adapters/controllers/slide.controller";
 import { requirePermission } from "@/middleware/authorization.middleware";
 import { resolveSuperAdminTenant } from "@/middleware/super-admin-tenant-resolver.middleware";
@@ -86,7 +87,7 @@ function slide(
         authenticate,
         requireTenantFeature("SLIDES"),
         requirePermission("banners:write"),
-        validateDto(CreateSlideshowDto),
+        validateDto(CreateSlideshowDtoSchema),
         slideController.create,
     );
 
@@ -134,7 +135,7 @@ function slide(
         authenticate,
         requireTenantFeature("SLIDES"),
         requirePermission("banners:write"),
-        validateDto(UpdateSlideshowDto),
+        validateDto(UpdateSlideshowDtoSchema),
         slideController.update,
     );
 
@@ -159,7 +160,7 @@ function slide(
         optionalAuthenticate,
         requireTenantFeature("SLIDES"),
         resolveSuperAdminTenant,
-        validateQueryDto(ActiveOnlyQueryDto),
+        validateQueryDto(ActiveOnlyQueryDtoSchema),
         slideController.getAll,
     );
 

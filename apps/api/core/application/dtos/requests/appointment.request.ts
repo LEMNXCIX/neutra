@@ -1,11 +1,10 @@
-import {
-    IsDateString,
-    IsEnum,
-    IsNotEmpty,
-    IsOptional,
-    IsString,
-} from "class-validator";
-import { AppointmentStatus } from "@/core/entities/appointment.entity";
+/**
+ * Zod-backed shim: the former decorator-based DTO classes here were
+ * replaced by inferred types from `@neutra/commons`. The internal
+ * `XDTO` interfaces are kept verbatim; routes now consume the shared
+ * `<Dto>Schema` values directly.
+ */
+import type { AppointmentStatus } from "@/core/entities/appointment.entity";
 
 export interface CreateAppointmentDTO {
     userId: string;
@@ -63,37 +62,12 @@ export interface GetAvailabilityDTO {
  * otherwise the actor's own id is used — so the DTO must not claim the client
  * always supplies it.
  */
-export class CreateAppointmentDto {
-    @IsString()
-    @IsNotEmpty()
-    serviceId!: string;
-
-    @IsString()
-    @IsNotEmpty()
-    staffId!: string;
-
-    @IsDateString()
-    startTime!: Date | string;
-
-    @IsOptional()
-    @IsString()
-    userId?: string;
-
-    @IsOptional()
-    @IsString()
-    notes?: string;
-
-    @IsOptional()
-    @IsString()
-    couponCode?: string;
-}
+export type CreateAppointmentDto =
+    import("@neutra/commons").CreateAppointmentDto;
 
 /** The body of `PUT /api/appointments/:id/cancel`: `reason` and nothing else. */
-export class CancelAppointmentDto implements CancelAppointmentDTO {
-    @IsOptional()
-    @IsString()
-    reason?: string;
-}
+export type CancelAppointmentDto =
+    import("@neutra/commons").CancelAppointmentDto;
 
 /**
  * The body of `PUT /api/appointments/:id/status`.
@@ -102,11 +76,5 @@ export class CancelAppointmentDto implements CancelAppointmentDTO {
  * `assertAppointmentStatus` in the use case, so a typo is a 400 at the edge
  * instead of a domain error after the appointment has been read.
  */
-export class UpdateAppointmentStatusDto {
-    @IsEnum(AppointmentStatus)
-    status!: AppointmentStatus;
-
-    @IsOptional()
-    @IsString()
-    reason?: string;
-}
+export type UpdateAppointmentStatusDto =
+    import("@neutra/commons").UpdateAppointmentStatusDto;

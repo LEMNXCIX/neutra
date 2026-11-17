@@ -1,26 +1,15 @@
-import { plainToInstance, Transform } from "class-transformer";
-import {
-    IsArray,
-    IsDateString,
-    IsDefined,
-    IsEnum,
-    IsInt,
-    IsNotEmpty,
-    IsNumber,
-    IsObject,
-    IsOptional,
-    IsString,
-    Max,
-    Min,
-    ValidateIf,
-    ValidateNested,
-} from "class-validator";
+/**
+ * Zod-backed shim: the former decorator-based DTO classes here were
+ * replaced by inferred types from `@neutra/commons`. The internal
+ * `XDTO` interfaces are kept verbatim; routes now consume the shared
+ * `<Dto>Schema` values directly.
+ */
 import { MAX_LOYALTY_PRISMA_INT } from "@/core/domain/loyalty/loyalty.policy";
-import { CouponType } from "@/core/entities/coupon.entity";
+import type { CouponType } from "@/core/entities/coupon.entity";
 import {
     LoyaltyCampaignAction,
-    LoyaltyCampaignMetric,
-    LoyaltyCampaignSource,
+    type LoyaltyCampaignMetric,
+    type LoyaltyCampaignSource,
 } from "@/core/entities/loyalty.entity";
 
 export interface LoyaltyRewardDefinitionDTO {
@@ -34,43 +23,8 @@ export interface LoyaltyRewardDefinitionDTO {
     applicableServices?: string[];
 }
 
-export class LoyaltyRewardDefinitionDto implements LoyaltyRewardDefinitionDTO {
-    @IsEnum(CouponType)
-    type!: CouponType;
-
-    @IsNumber()
-    @Min(0)
-    value!: number;
-
-    @IsOptional()
-    @IsString()
-    description?: string | null;
-
-    @IsOptional()
-    @IsNumber()
-    @Min(0)
-    minPurchaseAmount?: number | null;
-
-    @IsOptional()
-    @IsNumber()
-    @Min(0)
-    maxDiscountAmount?: number | null;
-
-    @IsOptional()
-    @IsArray()
-    @IsString({ each: true })
-    applicableProducts?: string[];
-
-    @IsOptional()
-    @IsArray()
-    @IsString({ each: true })
-    applicableCategories?: string[];
-
-    @IsOptional()
-    @IsArray()
-    @IsString({ each: true })
-    applicableServices?: string[];
-}
+export type LoyaltyRewardDefinitionDto =
+    import("@neutra/commons").LoyaltyRewardDefinitionDto;
 
 export interface CreateLoyaltyCampaignDTO {
     name: string;
@@ -86,55 +40,8 @@ export interface CreateLoyaltyCampaignDTO {
     maxClaims?: number | null;
 }
 
-export class CreateLoyaltyCampaignDto implements CreateLoyaltyCampaignDTO {
-    @IsString()
-    @IsNotEmpty()
-    name!: string;
-
-    @IsOptional()
-    @IsString()
-    description?: string | null;
-
-    @IsEnum(LoyaltyCampaignSource)
-    source!: LoyaltyCampaignSource;
-
-    @IsEnum(LoyaltyCampaignMetric)
-    metric!: LoyaltyCampaignMetric;
-
-    @IsString()
-    @IsNotEmpty()
-    targetValue!: string;
-
-    @IsDateString()
-    startsAt!: Date | string;
-
-    @IsDateString()
-    endsAt!: Date | string;
-
-    @IsDateString()
-    claimUntil!: Date | string;
-
-    @IsDefined()
-    @IsObject()
-    @ValidateNested()
-    @Transform(
-        ({ value }) => plainToInstance(LoyaltyRewardDefinitionDto, value),
-        { toClassOnly: true },
-    )
-    reward!: LoyaltyRewardDefinitionDto;
-
-    @IsInt()
-    @Min(1)
-    @Max(MAX_LOYALTY_PRISMA_INT)
-    rewardValidDays!: number;
-
-    @IsOptional()
-    @ValidateIf((_object, value) => value !== null)
-    @IsInt()
-    @Min(1)
-    @Max(MAX_LOYALTY_PRISMA_INT)
-    maxClaims?: number | null;
-}
+export type CreateLoyaltyCampaignDto =
+    import("@neutra/commons").CreateLoyaltyCampaignDto;
 
 export interface UpdateLoyaltyCampaignDTO {
     name?: string;
@@ -150,63 +57,8 @@ export interface UpdateLoyaltyCampaignDTO {
     maxClaims?: number | null;
 }
 
-export class UpdateLoyaltyCampaignDto implements UpdateLoyaltyCampaignDTO {
-    @IsOptional()
-    @IsString()
-    @IsNotEmpty()
-    name?: string;
-
-    @IsOptional()
-    @IsString()
-    description?: string | null;
-
-    @IsOptional()
-    @IsEnum(LoyaltyCampaignSource)
-    source?: LoyaltyCampaignSource;
-
-    @IsOptional()
-    @IsEnum(LoyaltyCampaignMetric)
-    metric?: LoyaltyCampaignMetric;
-
-    @IsOptional()
-    @IsString()
-    @IsNotEmpty()
-    targetValue?: string;
-
-    @IsOptional()
-    @IsDateString()
-    startsAt?: Date | string;
-
-    @IsOptional()
-    @IsDateString()
-    endsAt?: Date | string;
-
-    @IsOptional()
-    @IsDateString()
-    claimUntil?: Date | string;
-
-    @IsOptional()
-    @IsObject()
-    @ValidateNested()
-    @Transform(
-        ({ value }) => plainToInstance(LoyaltyRewardDefinitionDto, value),
-        { toClassOnly: true },
-    )
-    reward?: LoyaltyRewardDefinitionDto;
-
-    @IsOptional()
-    @IsInt()
-    @Min(1)
-    @Max(MAX_LOYALTY_PRISMA_INT)
-    rewardValidDays?: number;
-
-    @IsOptional()
-    @ValidateIf((_object, value) => value !== null)
-    @IsInt()
-    @Min(1)
-    @Max(MAX_LOYALTY_PRISMA_INT)
-    maxClaims?: number | null;
-}
+export type UpdateLoyaltyCampaignDto =
+    import("@neutra/commons").UpdateLoyaltyCampaignDto;
 
 export const LoyaltyCampaignLifecycleAction = LoyaltyCampaignAction;
 export type LoyaltyCampaignLifecycleAction = LoyaltyCampaignAction;
@@ -220,12 +72,8 @@ export interface LoyaltyCampaignLifecycleDTO {
         | "delete";
 }
 
-export class LoyaltyCampaignLifecycleDto
-    implements LoyaltyCampaignLifecycleDTO
-{
-    @IsEnum(LoyaltyCampaignLifecycleAction)
-    action!: LoyaltyCampaignLifecycleAction;
-}
+export type LoyaltyCampaignLifecycleDto =
+    import("@neutra/commons").LoyaltyCampaignLifecycleDto;
 
 export type CreateLoyaltyCampaignRequest = CreateLoyaltyCampaignDTO;
 export type UpdateLoyaltyCampaignRequest = UpdateLoyaltyCampaignDTO;

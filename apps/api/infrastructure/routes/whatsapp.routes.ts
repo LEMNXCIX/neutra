@@ -1,9 +1,10 @@
+import {
+    ConfigureWhatsAppDtoSchema,
+    SendNotificationDtoSchema,
+} from "@neutra/commons";
 import type { RequestHandler } from "express";
 import { type Application, Router } from "express";
-import {
-    ConfigureWhatsAppDto,
-    SendNotificationDto,
-} from "@/core/application/dtos/requests/whatsapp.request";
+
 import type { WhatsAppWebhookController } from "@/infrastructure/webhooks/whatsapp-webhook.controller";
 import type { WhatsAppController } from "@/interface-adapters/controllers/whatsapp.controller";
 import type { WhatsAppConfigController } from "@/interface-adapters/controllers/whatsapp-config.controller";
@@ -168,7 +169,7 @@ function whatsappRoutes(
         authenticate,
         requirePermission("whatsapp:write"),
         requireTenantFeature("WHATSAPP_API"),
-        validateDto(ConfigureWhatsAppDto),
+        validateDto(ConfigureWhatsAppDtoSchema),
         (req, res) => whatsappConfigController.updateConfig(req, res),
     );
 
@@ -205,7 +206,7 @@ function whatsappRoutes(
         authenticate,
         requirePermission("whatsapp:write"),
         requireTenantFeature("WHATSAPP_API"),
-        validateDto(SendNotificationDto),
+        validateDto(SendNotificationDtoSchema),
         (req, res) => whatsappController.sendTemplate(req, res),
     );
 

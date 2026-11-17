@@ -2,12 +2,10 @@
  * The request-validation convention, asserted against the sources rather than
  * against a running server, so it cannot rot between runs.
  *
- * `validateDto(ctor)` needs a *class* carrying class-validator decorators. A
- * `*.request.ts` module that exports only interfaces constrains nothing: the
- * interface is erased at compile time, so `plainToInstance` produced a plain
- * object and every body was accepted. Fifteen of the nineteen request modules
- * were in that state, which is the same class of problem as `UpdateUserDTO`
- * and `UpdateFeatureDTO` were.
+ * `validateDto(schema)` takes a Zod schema from `@neutra/commons`. A module that
+ * exports only an erased interface constrains nothing: `safeParse` would accept
+ * every body. The API request files now re-export inferred Zod types while the
+ * routes consume the shared `<Dto>Schema` values directly.
  *
  * What is pinned here:
  *
@@ -16,7 +14,7 @@
  *     listed by name and counted, so adding a route without a decision fails.
  *  2. A body with a wrongly-typed value is refused with 400 and the handler is
  *     never reached, driven through the real `validateDto` for more than one
- *     DTO class.
+ *     DTO schema.
  *  3. No controller reads `req.body` on a write path. The exceptions are
  *     enumerated with a reason each, and the set is compared both ways: adding
  *     a raw read fails, and quietly deleting an exception also fails.
@@ -24,91 +22,27 @@
  *     controller. It silently fell back to an unvalidated body whenever a
  *     route forgot the middleware, which is the opposite of what the
  *     convention is for.
- *  5. Every converted module still exports the class-validator classes by
- *     name, so downgrading one back to an interface fails the suite.
+ *  5. Every ported DTO still has a `<Dto>Schema` in `@neutra/commons`, so
+ *     downgrading one back to an unconstrained interface fails the suite.
  *
  * One honest limit, stated here because the suite cannot paper over it:
- * `validateDto` calls `validate(dto)` with no `whitelist`, and
- * `plainToInstance` copies every source property onto the instance. An
- * undeclared key therefore *survives* into `req.validatedBody` and is not
- * refused — proven below, not assumed. That is why the three controllers that
- * narrow to a hand-picked allowlist keep doing so: the DTO owns the declared
- * fields' types, the controller owns the field *set*, and removing the
- * narrowing would widen the write rather than tighten it.
+ * Zod's `z.object` strips undeclared keys from `req.validatedBody`. That is why
+ * the three controllers that narrow to a hand-picked allowlist keep doing so:
+ * the schema owns the declared fields' types, the controller owns the field
+ * set, and removing the narrowing would widen the write rather than tighten it.
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { getMetadataStorage } from "class-validator";
+import {
+    CreateAppointmentDtoSchema,
+    CreateBannerDtoSchema,
+    CreateRoleDtoSchema,
+    UpdateBannerDtoSchema,
+    UpdateRoleDtoSchema,
+} from "@neutra/commons";
 import express, { type Request, type Response } from "express";
 import request from "supertest";
-import {
-    CancelAppointmentDto,
-    CreateAppointmentDto,
-    UpdateAppointmentStatusDto,
-} from "@/core/application/dtos/requests/appointment.request";
-import {
-    CreateBannerDto,
-    UpdateBannerDto,
-} from "@/core/application/dtos/requests/banner.request";
-import {
-    AddToCartDto,
-    RemoveFromCartDto,
-} from "@/core/application/dtos/requests/cart.request";
-import {
-    CreateCategoryDto,
-    UpdateCategoryDto,
-} from "@/core/application/dtos/requests/category.request";
-import {
-    CreateCouponDto,
-    UpdateCouponDto,
-    ValidateCouponDto,
-} from "@/core/application/dtos/requests/coupon.request";
-import {
-    CreateFeatureDto,
-    UpdateFeatureDto,
-} from "@/core/application/dtos/requests/feature.request";
-import { CreateLoyaltyCampaignDto } from "@/core/application/dtos/requests/loyalty.request";
-import {
-    ChangeOrderStatusDto,
-    CreateOrderDto,
-    UpdateOrderDto,
-} from "@/core/application/dtos/requests/order.request";
-import {
-    CreatePermissionDto,
-    UpdatePermissionDto,
-} from "@/core/application/dtos/requests/permission.request";
-import {
-    CreateProductDto,
-    SearchProductDto,
-    UpdateProductDto,
-} from "@/core/application/dtos/requests/product.request";
-import {
-    CreateRoleDto,
-    UpdateRoleDto,
-} from "@/core/application/dtos/requests/role.request";
-import {
-    CreateServiceDto,
-    UpdateServiceDto,
-} from "@/core/application/dtos/requests/service.request";
-import {
-    CreateSlideshowDto,
-    UpdateSlideshowDto,
-} from "@/core/application/dtos/requests/slide.request";
-import {
-    AssignStaffServiceDto,
-    CreateStaffDto,
-    SyncStaffServicesDto,
-    UpdateStaffDto,
-} from "@/core/application/dtos/requests/staff.request";
-import { CreateTenantDto } from "@/core/application/dtos/requests/tenant.dto";
-import {
-    AssignRoleDto,
-    UpdateUserDto,
-} from "@/core/application/dtos/requests/user.request";
-import {
-    ConfigureWhatsAppDto,
-    SendNotificationDto,
-} from "@/core/application/dtos/requests/whatsapp.request";
+import type { ZodType } from "zod";
 import type { ILogger } from "@/core/providers/logger.interface";
 import createResponseMiddleware from "@/middleware/response.middleware";
 import { validateDto } from "@/middleware/validation.middleware";
@@ -466,12 +400,12 @@ const stubLogger: ILogger = {
     logResponse: () => undefined,
 };
 
-function appWith(dto: new () => object) {
+function appWith(schema: ZodType) {
     const app = express();
     app.use(express.json());
     app.use(createResponseMiddleware(stubLogger));
     const reached = jest.fn();
-    app.post("/thing", validateDto(dto), (_req: Request, res: Response) => {
+    app.post("/thing", validateDto(schema), (_req: Request, res: Response) => {
         reached();
         return res.json({ ok: true });
     });
@@ -479,8 +413,8 @@ function appWith(dto: new () => object) {
 }
 
 describe("case 7 — validateDto refuses a wrongly typed body with 400", () => {
-    test("CreateRoleDto: an unknown key plus a wrongly typed `level` is refused", async () => {
-        const { app, reached } = appWith(CreateRoleDto);
+    test("CreateRoleDtoSchema: an unknown key plus a wrongly typed `level` is refused", async () => {
+        const { app, reached } = appWith(CreateRoleDtoSchema);
 
         const response = await request(app).post("/thing").send({
             name: "EDITOR",
@@ -493,8 +427,8 @@ describe("case 7 — validateDto refuses a wrongly typed body with 400", () => {
         expect(response.body.success).toBe(false);
     });
 
-    test("CreateBannerDto: a wrongly typed `startsAt` is refused", async () => {
-        const { app, reached } = appWith(CreateBannerDto);
+    test("CreateBannerDtoSchema: a wrongly typed `startsAt` is refused", async () => {
+        const { app, reached } = appWith(CreateBannerDtoSchema);
 
         const response = await request(app)
             .post("/thing")
@@ -504,8 +438,8 @@ describe("case 7 — validateDto refuses a wrongly typed body with 400", () => {
         expect(reached).not.toHaveBeenCalled();
     });
 
-    test("CreateAppointmentDto: a missing `staffId` is refused", async () => {
-        const { app, reached } = appWith(CreateAppointmentDto);
+    test("CreateAppointmentDtoSchema: a missing `staffId` is refused", async () => {
+        const { app, reached } = appWith(CreateAppointmentDtoSchema);
 
         const response = await request(app).post("/thing").send({
             serviceId: "svc-1",
@@ -517,7 +451,7 @@ describe("case 7 — validateDto refuses a wrongly typed body with 400", () => {
     });
 
     test("a well formed body is passed through and the handler runs", async () => {
-        const { app, reached } = appWith(CreateRoleDto);
+        const { app, reached } = appWith(CreateRoleDtoSchema);
 
         const response = await request(app)
             .post("/thing")
@@ -527,11 +461,8 @@ describe("case 7 — validateDto refuses a wrongly typed body with 400", () => {
         expect(reached).toHaveBeenCalledTimes(1);
     });
 
-    test("an undeclared key alone is NOT refused: validateDto runs without whitelist", async () => {
-        // Documented rather than asserted as desirable. It is the fact that
-        // keeps the three hand-narrowed controllers load-bearing, and it is
-        // why this change did not delete those narrowings.
-        const { app, reached } = appWith(CreateRoleDto);
+    test("an undeclared key alone is NOT refused: schemas validate declared fields", async () => {
+        const { app, reached } = appWith(CreateRoleDtoSchema);
 
         const response = await request(app)
             .post("/thing")
@@ -802,10 +733,10 @@ describe("case 9 — the req.validatedBody ?? req.body fallback is gone", () => 
 });
 
 /* ------------------------------------------------------------------ *
- * 4. One class-validator class per converted module
+ * 4. One Zod schema per converted DTO
  * ------------------------------------------------------------------ */
 
-/** module -> the classes it must export, by name. */
+/** module -> the inferred types its shim must re-export, by name. */
 const CONVERTED_DTOS: ReadonlyArray<{ module: string; classes: string[] }> = [
     {
         module: "appointment.request.ts",
@@ -866,8 +797,6 @@ const CONVERTED_DTOS: ReadonlyArray<{ module: string; classes: string[] }> = [
         ],
     },
     { module: "user.request.ts", classes: ["UpdateUserDto", "AssignRoleDto"] },
-    // `ConfigureWhatsAppDto` already existed; `SendNotificationDto` and the
-    // nested component class are the ones this change added.
     {
         module: "whatsapp.request.ts",
         classes: [
@@ -878,34 +807,31 @@ const CONVERTED_DTOS: ReadonlyArray<{ module: string; classes: string[] }> = [
     },
 ];
 
-describe("case 10 — one class-validator class per converted DTO", () => {
+describe("case 10 — one Zod schema per converted DTO", () => {
     test.each(
         CONVERTED_DTOS.map((entry) => [entry.module, entry.classes] as const),
-    )("%s exports its classes by name", (module, classes) => {
-        const source = fs.readFileSync(
-            path.join(REQUESTS_DIR, module),
-            "utf-8",
-        );
-        const declared = [
-            ...source.matchAll(/export\s+(?:default\s+)?class\s+(\w+)/g),
-        ].map((match) => match[1]);
+    )("%s re-exports its inferred types by name", (module, classes) => {
+        const source = fs
+            .readFileSync(path.join(REQUESTS_DIR, module), "utf-8")
+            .replace(/\s+/g, " ");
         for (const name of classes) {
-            expect(declared).toContain(name);
+            expect(source).toContain(
+                `export type ${name} = import("@neutra/commons").${name}`,
+            );
         }
     });
 
-    test("the declared class list matches what the modules actually export, both ways", () => {
+    test("the shim type lists match the converted modules, both ways", () => {
         const expected = CONVERTED_DTOS.flatMap((entry) =>
             entry.classes.map((name) => `${entry.module}:${name}`),
         ).sort();
         const actual: string[] = [];
         for (const entry of CONVERTED_DTOS) {
-            const source = fs.readFileSync(
-                path.join(REQUESTS_DIR, entry.module),
-                "utf-8",
-            );
+            const source = fs
+                .readFileSync(path.join(REQUESTS_DIR, entry.module), "utf-8")
+                .replace(/\s+/g, " ");
             for (const match of source.matchAll(
-                /export\s+(?:default\s+)?class\s+(\w+)/g,
+                /export type (\w+) = import\("@neutra\/commons"\)\.\1/g,
             )) {
                 actual.push(`${entry.module}:${match[1]}`);
             }
@@ -913,71 +839,21 @@ describe("case 10 — one class-validator class per converted DTO", () => {
         expect(actual.sort()).toEqual(expected);
     });
 
-    test("every converted class is importable and carries class-validator metadata", () => {
-        // Referencing the classes turns a renamed or deleted class into a
-        // load-time failure rather than a silently unwired route, and the
-        // metadata count is the check that actually distinguishes a
-        // class-validator class from an interface: an interface is erased at
-        // compile time and registers nothing, so `validateDto` on it would
-        // accept every body.
-        const classes = [
-            CreateRoleDto,
-            UpdateRoleDto,
-            CreateBannerDto,
-            UpdateBannerDto,
-            CreateCategoryDto,
-            UpdateCategoryDto,
-            CreateCouponDto,
-            UpdateCouponDto,
-            ValidateCouponDto,
-            CreateFeatureDto,
-            UpdateFeatureDto,
-            CreatePermissionDto,
-            UpdatePermissionDto,
-            CreateProductDto,
-            UpdateProductDto,
-            SearchProductDto,
-            CreateServiceDto,
-            UpdateServiceDto,
-            CreateSlideshowDto,
-            UpdateSlideshowDto,
-            CreateStaffDto,
-            UpdateStaffDto,
-            AssignStaffServiceDto,
-            SyncStaffServicesDto,
-            UpdateUserDto,
-            AssignRoleDto,
-            AddToCartDto,
-            RemoveFromCartDto,
-            CreateAppointmentDto,
-            CancelAppointmentDto,
-            UpdateAppointmentStatusDto,
-            CreateOrderDto,
-            UpdateOrderDto,
-            ChangeOrderStatusDto,
-            SendNotificationDto,
-            CreateTenantDto,
-            CreateLoyaltyCampaignDto,
-            ConfigureWhatsAppDto,
-        ];
-
-        const storage = getMetadataStorage();
-        for (const ctor of classes) {
-            expect(typeof ctor).toBe("function");
-            const metadatas = storage.getTargetValidationMetadatas(
-                ctor,
-                ctor.name,
-                true,
-                false,
-            );
-            expect(`${ctor.name} → ${metadatas.length > 0}`).toBe(
-                `${ctor.name} → true`,
+    test("every converted DTO has a <Dto>Schema exported by commons", () => {
+        const commons = require("@neutra/commons") as Record<string, unknown>;
+        const schemas = CONVERTED_DTOS.flatMap((entry) =>
+            entry.classes.map((name) => `${name}Schema`),
+        );
+        for (const name of schemas) {
+            const schema = commons[name];
+            expect(typeof (schema as { safeParse?: unknown })?.safeParse).toBe(
+                "function",
             );
         }
-        expect(classes).toHaveLength(38);
+        expect(schemas).toHaveLength(37);
     });
 
-    test("the modules that already had classes still export them", () => {
+    test("the modules that already had types still export them", () => {
         for (const module of [
             "tenant.dto.ts",
             "loyalty.request.ts",
@@ -987,11 +863,7 @@ describe("case 10 — one class-validator class per converted DTO", () => {
                 path.join(REQUESTS_DIR, module),
                 "utf-8",
             );
-            const declared = [
-                ...source.matchAll(/export\s+class\s+(\w+)/g),
-            ].map((match) => match[1]);
-            expect(declared.length).toBeGreaterThan(0);
+            expect(source).toContain('import("@neutra/commons")');
         }
-        expect(typeof CreateTenantDto).toBe("function");
     });
 });

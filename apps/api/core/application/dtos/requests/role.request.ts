@@ -1,13 +1,9 @@
-import {
-    IsArray,
-    IsBoolean,
-    IsInt,
-    IsNotEmpty,
-    IsOptional,
-    IsString,
-    Min,
-} from "class-validator";
-
+/**
+ * Zod-backed shim: the former decorator-based DTO classes here were
+ * replaced by inferred types from `@neutra/commons`. The internal
+ * `XDTO` interfaces are kept verbatim; routes now consume the shared
+ * `<Dto>Schema` values directly.
+ */
 export interface CreateRoleDTO {
     name: string;
     description?: string;
@@ -30,50 +26,6 @@ export interface UpdateRoleDTO {
  * repository takes the tenant from its first argument, so a `tenantId` in the
  * body is not what scopes a role.
  */
-export class CreateRoleDto implements CreateRoleDTO {
-    @IsString()
-    @IsNotEmpty()
-    name!: string;
+export type CreateRoleDto = import("@neutra/commons").CreateRoleDto;
 
-    @IsOptional()
-    @IsString()
-    description?: string;
-
-    @IsOptional()
-    @IsInt()
-    @Min(0)
-    level?: number;
-
-    @IsOptional()
-    @IsBoolean()
-    active?: boolean;
-
-    @IsOptional()
-    @IsArray()
-    @IsString({ each: true })
-    permissionIds?: string[];
-}
-
-export class UpdateRoleDto implements UpdateRoleDTO {
-    @IsOptional()
-    @IsString()
-    name?: string;
-
-    @IsOptional()
-    @IsString()
-    description?: string;
-
-    @IsOptional()
-    @IsInt()
-    @Min(0)
-    level?: number;
-
-    @IsOptional()
-    @IsBoolean()
-    active?: boolean;
-
-    @IsOptional()
-    @IsArray()
-    @IsString({ each: true })
-    permissionIds?: string[];
-}
+export type UpdateRoleDto = import("@neutra/commons").UpdateRoleDto;

@@ -1,12 +1,9 @@
-import {
-    IsArray,
-    IsBoolean,
-    IsNumber,
-    IsOptional,
-    IsString,
-    Min,
-} from "class-validator";
-
+/**
+ * Zod-backed shim: the former decorator-based DTO classes here were
+ * replaced by inferred types from `@neutra/commons`. The internal
+ * `XDTO` interfaces are kept verbatim; routes now consume the shared
+ * `<Dto>Schema` values directly.
+ */
 export interface CreateProductDTO {
     name: string;
     description: string;
@@ -39,71 +36,9 @@ export interface SearchProductDTO {
  * a server-owned field and a body value for it can never win. The class does
  * not implement `CreateProductDTO` for the same reason.
  */
-export class CreateProductDto {
-    @IsString()
-    name!: string;
+export type CreateProductDto = import("@neutra/commons").CreateProductDto;
 
-    @IsString()
-    description!: string;
-
-    @IsOptional()
-    @IsString()
-    image?: string;
-
-    @IsNumber()
-    @Min(0)
-    price!: number;
-
-    @IsOptional()
-    @IsNumber()
-    @Min(0)
-    stock?: number;
-
-    @IsOptional()
-    @IsBoolean()
-    active?: boolean;
-
-    @IsOptional()
-    @IsArray()
-    @IsString({ each: true })
-    categoryIds?: string[];
-}
-
-export class UpdateProductDto implements UpdateProductDTO {
-    @IsOptional()
-    @IsString()
-    name?: string;
-
-    @IsOptional()
-    @IsString()
-    description?: string;
-
-    @IsOptional()
-    @IsString()
-    image?: string;
-
-    @IsOptional()
-    @IsNumber()
-    @Min(0)
-    price?: number;
-
-    @IsOptional()
-    @IsNumber()
-    @Min(0)
-    stock?: number;
-
-    @IsOptional()
-    @IsBoolean()
-    active?: boolean;
-
-    @IsOptional()
-    @IsArray()
-    @IsString({ each: true })
-    categoryIds?: string[];
-}
+export type UpdateProductDto = import("@neutra/commons").UpdateProductDto;
 
 /** The body of the public `POST /api/products/search`. */
-export class SearchProductDto implements SearchProductDTO {
-    @IsString()
-    name!: string;
-}
+export type SearchProductDto = import("@neutra/commons").SearchProductDto;

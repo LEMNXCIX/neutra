@@ -1,5 +1,9 @@
-import { IsNotEmpty, IsNumber, IsString, Min } from "class-validator";
-
+/**
+ * Zod-backed shim: the former decorator-based DTO classes here were
+ * replaced by inferred types from `@neutra/commons`. The internal
+ * `XDTO` interfaces are kept verbatim; routes now consume the shared
+ * `<Dto>Schema` values directly.
+ */
 export interface AddToCartDTO {
     productId: string;
     amount: number;
@@ -21,22 +25,10 @@ export interface ChangeCartAmountDTO {
 }
 
 /** The body of `POST /api/cart/add`. */
-export class AddToCartDto implements AddToCartDTO {
-    @IsString()
-    @IsNotEmpty()
-    productId!: string;
-
-    @IsNumber()
-    @Min(1)
-    amount!: number;
-}
+export type AddToCartDto = import("@neutra/commons").AddToCartDto;
 
 /** The body of `PUT /api/cart/remove`. */
-export class RemoveFromCartDto implements RemoveFromCartDTO {
-    @IsString()
-    @IsNotEmpty()
-    id!: string;
-}
+export type RemoveFromCartDto = import("@neutra/commons").RemoveFromCartDto;
 
 // `ChangeCartAmountDTO` has no class: `CartController.changeAmount` is not
 // mounted on any route, so nothing reads `amount` off a request body today and

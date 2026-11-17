@@ -1,15 +1,14 @@
+import {
+    AttentionAppointmentsQueryDtoSchema,
+    AvailabilityQueryDtoSchema,
+    CancelAppointmentDtoSchema,
+    CreateAppointmentDtoSchema,
+    ListAppointmentsQueryDtoSchema,
+    UpdateAppointmentStatusDtoSchema,
+} from "@neutra/commons";
 import type { RequestHandler } from "express";
 import { type Application, Router } from "express";
-import {
-    AttentionAppointmentsQueryDto,
-    AvailabilityQueryDto,
-    ListAppointmentsQueryDto,
-} from "@/core/application/dtos/requests/appointment.query";
-import {
-    CancelAppointmentDto,
-    CreateAppointmentDto,
-    UpdateAppointmentStatusDto,
-} from "@/core/application/dtos/requests/appointment.request";
+
 import type { AppointmentController } from "@/interface-adapters/controllers/appointment.controller";
 import {
     APPOINTMENT_OPERATIONAL_ROLES,
@@ -141,7 +140,7 @@ function appointments(
     router.get(
         "/availability",
         requireTenantType("BOOKING", "HYBRID"),
-        validateQueryDto(AvailabilityQueryDto),
+        validateQueryDto(AvailabilityQueryDtoSchema),
         (req, res) => appointmentController.getAvailability(req, res),
     );
 
@@ -177,7 +176,7 @@ function appointments(
         "/",
         requireTenantType("BOOKING", "HYBRID"),
         authenticate,
-        validateDto(CreateAppointmentDto),
+        validateDto(CreateAppointmentDtoSchema),
         (req, res) => appointmentController.create(req, res),
     );
 
@@ -240,7 +239,7 @@ function appointments(
         requireTenantType("BOOKING", "HYBRID"),
         authenticate,
         resolveSuperAdminTenant,
-        validateQueryDto(ListAppointmentsQueryDto),
+        validateQueryDto(ListAppointmentsQueryDtoSchema),
         (req, res) => appointmentController.getAll(req, res),
     );
 
@@ -300,7 +299,7 @@ function appointments(
         requireConcreteTenantContext,
         requirePermission("appointments:read"),
         requireAnyRole(APPOINTMENT_OPERATIONAL_ROLES),
-        validateQueryDto(AttentionAppointmentsQueryDto),
+        validateQueryDto(AttentionAppointmentsQueryDtoSchema),
         (req, res) => appointmentController.getAttention(req, res),
     );
 
@@ -380,7 +379,7 @@ function appointments(
         "/:id/cancel",
         requireTenantType("BOOKING", "HYBRID"),
         authenticate,
-        validateDto(CancelAppointmentDto),
+        validateDto(CancelAppointmentDtoSchema),
         (req, res) => appointmentController.cancel(req, res),
     );
 
@@ -425,7 +424,7 @@ function appointments(
         authenticate,
         requirePermission("appointments:write"),
         requireAnyRole(APPOINTMENT_OPERATIONAL_ROLES),
-        validateDto(UpdateAppointmentStatusDto),
+        validateDto(UpdateAppointmentStatusDtoSchema),
         (req, res) => appointmentController.updateStatus(req, res),
     );
 

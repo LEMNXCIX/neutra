@@ -1,5 +1,9 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength } from "class-validator";
-
+/**
+ * Zod-backed shim: the former decorator-based DTO classes here were
+ * replaced by inferred types from `@neutra/commons`. The internal
+ * `XDTO` interfaces are kept verbatim; routes now consume the shared
+ * `<Dto>Schema` values directly.
+ */
 export interface LoginDTO {
     email: string;
     password: string;
@@ -30,17 +34,6 @@ export interface SocialLoginDTO {
  * in `types/` because that file is the odd home the convention is moving away
  * from, and a class per body is the convention the other write routes follow.
  */
-export class ForgotPasswordDto implements ForgotPasswordDTO {
-    @IsEmail()
-    email!: string;
-}
+export type ForgotPasswordDto = import("@neutra/commons").ForgotPasswordDto;
 
-export class ResetPasswordDto implements ResetPasswordDTO {
-    @IsString()
-    @IsNotEmpty()
-    token!: string;
-
-    @IsString()
-    @MinLength(8)
-    newPassword!: string;
-}
+export type ResetPasswordDto = import("@neutra/commons").ResetPasswordDto;

@@ -1,13 +1,9 @@
-import {
-    IsBoolean,
-    IsInt,
-    IsNotEmpty,
-    IsNumber,
-    IsOptional,
-    IsString,
-    Min,
-} from "class-validator";
-
+/**
+ * Zod-backed shim: the former decorator-based DTO classes here were
+ * replaced by inferred types from `@neutra/commons`. The internal
+ * `XDTO` interfaces are kept verbatim; routes now consume the shared
+ * `<Dto>Schema` values directly.
+ */
 export interface CreateServiceDTO {
     name: string;
     description?: string;
@@ -32,56 +28,6 @@ export interface UpdateServiceDTO {
  * is asserted as an integer: a fractional duration would silently produce an
  * `endTime` the availability maths never rounds.
  */
-export class CreateServiceDto implements CreateServiceDTO {
-    @IsString()
-    @IsNotEmpty()
-    name!: string;
+export type CreateServiceDto = import("@neutra/commons").CreateServiceDto;
 
-    @IsOptional()
-    @IsString()
-    description?: string;
-
-    @IsInt()
-    @Min(1)
-    duration!: number;
-
-    @IsNumber()
-    @Min(0)
-    price!: number;
-
-    @IsOptional()
-    @IsString()
-    categoryId?: string;
-
-    @IsOptional()
-    @IsBoolean()
-    active?: boolean;
-}
-
-export class UpdateServiceDto implements UpdateServiceDTO {
-    @IsOptional()
-    @IsString()
-    name?: string;
-
-    @IsOptional()
-    @IsString()
-    description?: string;
-
-    @IsOptional()
-    @IsInt()
-    @Min(1)
-    duration?: number;
-
-    @IsOptional()
-    @IsNumber()
-    @Min(0)
-    price?: number;
-
-    @IsOptional()
-    @IsString()
-    categoryId?: string;
-
-    @IsOptional()
-    @IsBoolean()
-    active?: boolean;
-}
+export type UpdateServiceDto = import("@neutra/commons").UpdateServiceDto;

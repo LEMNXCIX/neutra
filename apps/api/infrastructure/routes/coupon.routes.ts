@@ -1,11 +1,12 @@
+import {
+    CouponListQueryDtoSchema,
+    CreateCouponDtoSchema,
+    UpdateCouponDtoSchema,
+    ValidateCouponDtoSchema,
+} from "@neutra/commons";
 import type { RequestHandler } from "express";
 import { type Application, Router } from "express";
-import {
-    CreateCouponDto,
-    UpdateCouponDto,
-    ValidateCouponDto,
-} from "@/core/application/dtos/requests/coupon.request";
-import { CouponListQueryDto } from "@/core/application/dtos/requests/list-query.dto";
+
 import type { CouponController } from "@/interface-adapters/controllers/coupon.controller";
 import { requirePermission } from "@/middleware/authorization.middleware";
 import {
@@ -84,7 +85,7 @@ function couponRoutes(
         "/validate",
         requireTenantFeature("COUPONS"),
         authenticate,
-        validateDto(ValidateCouponDto),
+        validateDto(ValidateCouponDtoSchema),
         couponController.validate,
     );
 
@@ -140,7 +141,7 @@ function couponRoutes(
         requireTenantFeature("COUPONS"),
         authenticate,
         requirePermission("coupons:read"),
-        validateQueryDto(CouponListQueryDto),
+        validateQueryDto(CouponListQueryDtoSchema),
         couponController.getAll,
     );
 
@@ -259,7 +260,7 @@ function couponRoutes(
         requireTenantFeature("COUPONS"),
         authenticate,
         requirePermission("coupons:write"),
-        validateDto(CreateCouponDto),
+        validateDto(CreateCouponDtoSchema),
         couponController.create,
     );
 
@@ -308,7 +309,7 @@ function couponRoutes(
         requireTenantFeature("COUPONS"),
         authenticate,
         requirePermission("coupons:write"),
-        validateDto(UpdateCouponDto),
+        validateDto(UpdateCouponDtoSchema),
         couponController.update,
     );
 

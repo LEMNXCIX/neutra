@@ -37,7 +37,7 @@ export class ServiceController {
         const { activeOnly: raw } = (req.validatedQuery ??
             {}) as ActiveOnlyQueryDto;
         // Historical default for services/staff is `true` (see Swagger).
-        const activeOnly = raw !== "false";
+        const activeOnly = raw !== false;
         const result = await this.getServicesUseCase.execute(
             tenantId,
             activeOnly,

@@ -1,10 +1,11 @@
+import {
+    CreateRoleDtoSchema,
+    PagedSearchQueryDtoSchema,
+    UpdateRoleDtoSchema,
+} from "@neutra/commons";
 import type { RequestHandler } from "express";
 import { type Application, Router } from "express";
-import { PagedSearchQueryDto } from "@/core/application/dtos/requests/list-query.dto";
-import {
-    CreateRoleDto,
-    UpdateRoleDto,
-} from "@/core/application/dtos/requests/role.request";
+
 import type { RoleController } from "@/interface-adapters/controllers/role.controller";
 import { requirePermission } from "@/middleware/authorization.middleware";
 import {
@@ -71,7 +72,7 @@ function roleRoutes(
         "/",
         authenticate,
         requirePermission("roles:read"),
-        validateQueryDto(PagedSearchQueryDto),
+        validateQueryDto(PagedSearchQueryDtoSchema),
         roleController.getAll,
     );
 
@@ -139,7 +140,7 @@ function roleRoutes(
         "/",
         authenticate,
         requirePermission("roles:write"),
-        validateDto(CreateRoleDto),
+        validateDto(CreateRoleDtoSchema),
         roleController.create,
     );
 
@@ -184,7 +185,7 @@ function roleRoutes(
         "/:id",
         authenticate,
         requirePermission("roles:write"),
-        validateDto(UpdateRoleDto),
+        validateDto(UpdateRoleDtoSchema),
         roleController.update,
     );
 

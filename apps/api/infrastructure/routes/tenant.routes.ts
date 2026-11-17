@@ -1,10 +1,11 @@
+import {
+    CreateTenantDtoSchema,
+    UpdateTenantDtoSchema,
+    UpdateTenantFeaturesDtoSchema,
+} from "@neutra/commons";
 import type { RequestHandler } from "express";
 import { type Application, Router } from "express";
-import {
-    CreateTenantDto,
-    UpdateTenantDto,
-    UpdateTenantFeaturesDto,
-} from "@/core/application/dtos/requests/tenant.dto";
+
 import type { TenantController } from "@/interface-adapters/controllers/tenant.controller";
 import { serviceTokenOr } from "@/middleware/service-token.middleware";
 import { validateDto } from "@/middleware/validation.middleware";
@@ -150,8 +151,11 @@ function tenants(
      *       409:
      *         description: Tenant with this slug already exists
      */
-    router.post("/", authenticate, validateDto(CreateTenantDto), (req, res) =>
-        tenantController.create(req, res),
+    router.post(
+        "/",
+        authenticate,
+        validateDto(CreateTenantDtoSchema),
+        (req, res) => tenantController.create(req, res),
     );
 
     /**
@@ -221,7 +225,7 @@ function tenants(
     router.put(
         "/:id/features",
         authenticate,
-        validateDto(UpdateTenantFeaturesDto),
+        validateDto(UpdateTenantFeaturesDtoSchema),
         (req, res) => tenantController.updateFeatures(req, res),
     );
 
@@ -316,8 +320,11 @@ function tenants(
      *       409:
      *         description: Slug already in use
      */
-    router.put("/:id", authenticate, validateDto(UpdateTenantDto), (req, res) =>
-        tenantController.update(req, res),
+    router.put(
+        "/:id",
+        authenticate,
+        validateDto(UpdateTenantDtoSchema),
+        (req, res) => tenantController.update(req, res),
     );
 
     /**

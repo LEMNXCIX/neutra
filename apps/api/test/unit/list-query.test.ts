@@ -1,53 +1,51 @@
-import { plainToInstance } from "class-transformer";
-import { validate } from "class-validator";
 import {
-    ActiveOnlyQueryDto,
-    LogListQueryDto,
-    OrderListQueryDto,
-    PagedQueryDto,
-} from "@/core/application/dtos/requests/list-query.dto";
+    ActiveOnlyQueryDtoSchema,
+    LogListQueryDtoSchema,
+    OrderListQueryDtoSchema,
+    PagedQueryDtoSchema,
+} from "@neutra/commons";
+import type { ZodType } from "zod";
 
-async function errorsOf<T>(
-    ctor: new () => T,
-    input: object,
-): Promise<string[]> {
-    const dto = plainToInstance(ctor, input);
-    return (await validate(dto as object)).map((error) => error.property);
+function errorsOf(schema: ZodType, input: object): string[] {
+    const result = schema.safeParse(input);
+    return result.success
+        ? []
+        : result.error.issues.map((i) => i.path.join("."));
 }
 
-describe("shared list query DTOs", () => {
-    test("PagedQueryDto rejects garbage and accepts positive integers", async () => {
-        expect(await errorsOf(PagedQueryDto, { page: "abc" })).toEqual([
+describe("shared list query schemas", () => {
+    test("PagedQueryDtoSchema rejects garbage and accepts positive integers", () => {
+        expect(errorsOf(PagedQueryDtoSchema, { page: "abc" })).toEqual([
             "page",
         ]);
-        expect(await errorsOf(PagedQueryDto, { limit: "0" })).toEqual([
+        expect(errorsOf(PagedQueryDtoSchema, { limit: "0" })).toEqual([
             "limit",
         ]);
         expect(
-            await errorsOf(PagedQueryDto, { page: "2", limit: "25" }),
+            errorsOf(PagedQueryDtoSchema, { page: "2", limit: "25" }),
         ).toEqual([]);
     });
 
-    test("ActiveOnlyQueryDto only accepts literal booleans", async () => {
-        expect(await errorsOf(ActiveOnlyQueryDto, { activeOnly: "1" })).toEqual(
+    test("ActiveOnlyQueryDtoSchema only accepts literal booleans", () => {
+        expect(errorsOf(ActiveOnlyQueryDtoSchema, { activeOnly: "1" })).toEqual(
             ["activeOnly"],
         );
         expect(
-            await errorsOf(ActiveOnlyQueryDto, { activeOnly: "false" }),
+            errorsOf(ActiveOnlyQueryDtoSchema, { activeOnly: "false" }),
         ).toEqual([]);
     });
 
-    test("OrderListQueryDto rejects malformed dates", async () => {
+    test("OrderListQueryDtoSchema rejects malformed dates", () => {
         expect(
-            await errorsOf(OrderListQueryDto, { startDate: "not-a-date" }),
+            errorsOf(OrderListQueryDtoSchema, { startDate: "not-a-date" }),
         ).toEqual(["startDate"]);
     });
 
-    test("LogListQueryDto validates skip/take and dates", async () => {
-        expect(await errorsOf(LogListQueryDto, { skip: "-1" })).toEqual([
+    test("LogListQueryDtoSchema validates skip/take and dates", () => {
+        expect(errorsOf(LogListQueryDtoSchema, { skip: "-1" })).toEqual([
             "skip",
         ]);
-        expect(await errorsOf(LogListQueryDto, { endDate: "garbage" })).toEqual(
+        expect(errorsOf(LogListQueryDtoSchema, { endDate: "garbage" })).toEqual(
             ["endDate"],
         );
     });

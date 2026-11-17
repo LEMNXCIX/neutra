@@ -1,6 +1,6 @@
 /**
  * Records the canonical `{status, errors}` response for every representative
- * validation case, using the CURRENT class-validator/class-transformer stack.
+ * validation case, using the CURRENT legacy decorator-based validation stack.
  *
  * Task 8 must reproduce this snapshot byte-for-byte after swapping the
  * validation middleware for Zod. Run with:
@@ -11,51 +11,49 @@
  * (the recording only runs when this file is the process entry point), so the
  * snapshot and the assertions always exercise the exact same request matrix.
  *
- * MIGRATION NOTE (Task 8): the `*.request` / `*.query` / `*.dto` class imports
- * below are the only class-validator-dependent lines in this file. When those
- * DTO files are deleted, swap these imports for the equivalent schemas from
- * `@neutra/commons`; GOLDEN_CASES, the case ids/inputs and the snapshot format
- * stay unchanged, so `validation-golden.test.ts` needs no edits.
+ * MIGRATION NOTE (Task 8): the legacy DTO-class imports that used to live
+ * here are now the equivalent Zod schemas from `@neutra/commons`. GOLDEN_CASES,
+ * the case ids/inputs and the snapshot format are unchanged, so
+ * `validation-golden.test.ts` needs no edits and the snapshot stays byte-identical.
  */
 import fs from "node:fs";
 import path from "node:path";
+import {
+    ActiveOnlyQueryDtoSchema,
+    AddToCartDtoSchema,
+    AssignRoleDtoSchema,
+    AttentionAppointmentsQueryDtoSchema,
+    AvailabilityQueryDtoSchema,
+    CategoryListQueryDtoSchema,
+    ChangeOrderStatusDtoSchema,
+    ConfigureWhatsAppDtoSchema,
+    CouponListQueryDtoSchema,
+    CreateAppointmentDtoSchema,
+    CreateBannerDtoSchema,
+    CreateCategoryDtoSchema,
+    CreateCouponDtoSchema,
+    CreateFeatureDtoSchema,
+    CreatePermissionDtoSchema,
+    CreateProductDtoSchema,
+    CreateRoleDtoSchema,
+    CreateServiceDtoSchema,
+    CreateSlideshowDtoSchema,
+    CreateStaffDtoSchema,
+    CreateTenantDtoSchema,
+    DatedQueryDtoSchema,
+    ForgotPasswordDtoSchema,
+    ListAppointmentsQueryDtoSchema,
+    LogListQueryDtoSchema,
+    LoyaltyRewardDefinitionDtoSchema,
+    OrderListQueryDtoSchema,
+    OrderStatusQueryDtoSchema,
+    PagedSearchQueryDtoSchema,
+    SimpleQueryDtoSchema,
+} from "@neutra/commons";
 import express from "express";
 import type { Response } from "supertest";
 import supertest from "supertest";
-import {
-    AttentionAppointmentsQueryDto,
-    AvailabilityQueryDto,
-    ListAppointmentsQueryDto,
-} from "@/core/application/dtos/requests/appointment.query";
-import { CreateAppointmentDto } from "@/core/application/dtos/requests/appointment.request";
-import { ForgotPasswordDto } from "@/core/application/dtos/requests/auth.request";
-import { CreateBannerDto } from "@/core/application/dtos/requests/banner.request";
-import { AddToCartDto } from "@/core/application/dtos/requests/cart.request";
-import { CreateCategoryDto } from "@/core/application/dtos/requests/category.request";
-import { CreateCouponDto } from "@/core/application/dtos/requests/coupon.request";
-import { CreateFeatureDto } from "@/core/application/dtos/requests/feature.request";
-import {
-    ActiveOnlyQueryDto,
-    CategoryListQueryDto,
-    CouponListQueryDto,
-    DatedQueryDto,
-    LogListQueryDto,
-    OrderListQueryDto,
-    OrderStatusQueryDto,
-    PagedSearchQueryDto,
-    SimpleQueryDto,
-} from "@/core/application/dtos/requests/list-query.dto";
-import { LoyaltyRewardDefinitionDto } from "@/core/application/dtos/requests/loyalty.request";
-import { ChangeOrderStatusDto } from "@/core/application/dtos/requests/order.request";
-import { CreatePermissionDto } from "@/core/application/dtos/requests/permission.request";
-import { CreateProductDto } from "@/core/application/dtos/requests/product.request";
-import { CreateRoleDto } from "@/core/application/dtos/requests/role.request";
-import { CreateServiceDto } from "@/core/application/dtos/requests/service.request";
-import { CreateSlideshowDto } from "@/core/application/dtos/requests/slide.request";
-import { CreateStaffDto } from "@/core/application/dtos/requests/staff.request";
-import { CreateTenantDto } from "@/core/application/dtos/requests/tenant.dto";
-import { AssignRoleDto } from "@/core/application/dtos/requests/user.request";
-import { ConfigureWhatsAppDto } from "@/core/application/dtos/requests/whatsapp.request";
+import type { ZodType } from "zod";
 import type { ILogger } from "@/core/providers/logger.interface";
 import createResponseMiddleware from "@/middleware/response.middleware";
 import {
@@ -71,7 +69,7 @@ export const SNAPSHOT_PATH = path.resolve(
     "validation.snapshot.json",
 );
 
-type DtoCtor = new () => object;
+type DtoSchema = ZodType;
 
 export type GoldenCase = {
     /** Stable key used in the snapshot object. */
@@ -79,7 +77,7 @@ export type GoldenCase = {
     kind: "query" | "body";
     /** Route mounted on the harness app (unique per case). */
     path: string;
-    dto: DtoCtor;
+    dto: DtoSchema;
     /**
      * Invalid query string / request body that must trigger a 400. A string is
      * used for repeated query params, which Express's simple parser turns into
@@ -91,7 +89,7 @@ export type GoldenCase = {
 /**
  * 16 query call sites (appointment 3, category, coupon, log 2, order 4,
  * permission, role, service, slide, staff) + one invalid case per request-DTO
- * family that carries class-validator decorators (20 families).
+ * family that carries validation decorators (20 families).
  */
 export const GOLDEN_CASES: GoldenCase[] = [
     // ---- 16 validateQueryDto call sites ----
@@ -99,112 +97,112 @@ export const GOLDEN_CASES: GoldenCase[] = [
         id: "query.appointment.availability",
         kind: "query",
         path: "/golden/query/appointment-availability",
-        dto: AvailabilityQueryDto,
+        dto: AvailabilityQueryDtoSchema,
         input: {},
     },
     {
         id: "query.appointment.list",
         kind: "query",
         path: "/golden/query/appointment-list",
-        dto: ListAppointmentsQueryDto,
+        dto: ListAppointmentsQueryDtoSchema,
         input: { page: "abc", limit: "0", startDate: "yesterday" },
     },
     {
         id: "query.appointment.attention",
         kind: "query",
         path: "/golden/query/appointment-attention",
-        dto: AttentionAppointmentsQueryDto,
+        dto: AttentionAppointmentsQueryDtoSchema,
         input: { page: "0", limit: "-5" },
     },
     {
         id: "query.category.list",
         kind: "query",
         path: "/golden/query/category-list",
-        dto: CategoryListQueryDto,
+        dto: CategoryListQueryDtoSchema,
         input: { page: "abc" },
     },
     {
         id: "query.coupon.list",
         kind: "query",
         path: "/golden/query/coupon-list",
-        dto: CouponListQueryDto,
+        dto: CouponListQueryDtoSchema,
         input: { limit: "abc" },
     },
     {
         id: "query.log.list",
         kind: "query",
         path: "/golden/query/log-list",
-        dto: LogListQueryDto,
+        dto: LogListQueryDtoSchema,
         input: { skip: "abc", startDate: "bad", take: "0" },
     },
     {
         id: "query.log.stats",
         kind: "query",
         path: "/golden/query/log-stats",
-        dto: SimpleQueryDto,
+        dto: SimpleQueryDtoSchema,
         input: "timeframe=a&timeframe=b",
     },
     {
         id: "query.order.getOrderByUser",
         kind: "query",
         path: "/golden/query/order-get-order-by-user",
-        dto: OrderStatusQueryDto,
+        dto: OrderStatusQueryDtoSchema,
         input: "status=a&status=b",
     },
     {
         id: "query.order.stats",
         kind: "query",
         path: "/golden/query/order-stats",
-        dto: DatedQueryDto,
+        dto: DatedQueryDtoSchema,
         input: { startDate: "not-a-date", endDate: "also-bad" },
     },
     {
         id: "query.order.list",
         kind: "query",
         path: "/golden/query/order-list",
-        dto: OrderListQueryDto,
+        dto: OrderListQueryDtoSchema,
         input: "page=abc&status=a&status=b&startDate=bad",
     },
     {
         id: "query.order.all",
         kind: "query",
         path: "/golden/query/order-all",
-        dto: OrderListQueryDto,
+        dto: OrderListQueryDtoSchema,
         input: { limit: "0" },
     },
     {
         id: "query.permission.list",
         kind: "query",
         path: "/golden/query/permission-list",
-        dto: PagedSearchQueryDto,
+        dto: PagedSearchQueryDtoSchema,
         input: "page=abc&search=a&search=b",
     },
     {
         id: "query.role.list",
         kind: "query",
         path: "/golden/query/role-list",
-        dto: PagedSearchQueryDto,
+        dto: PagedSearchQueryDtoSchema,
         input: { limit: "-1" },
     },
     {
         id: "query.service.list",
         kind: "query",
         path: "/golden/query/service-list",
-        dto: ActiveOnlyQueryDto,
+        dto: ActiveOnlyQueryDtoSchema,
         input: { activeOnly: "yes" },
     },
     {
         id: "query.slide.list",
         kind: "query",
         path: "/golden/query/slide-list",
-        dto: ActiveOnlyQueryDto,
+        dto: ActiveOnlyQueryDtoSchema,
         input: { activeOnly: "TRUE" },
     },
     {
         id: "query.staff.list",
         kind: "query",
         path: "/golden/query/staff-list",
-        dto: ActiveOnlyQueryDto,
+        dto: ActiveOnlyQueryDtoSchema,
         input: { activeOnly: "1" },
     },
 
@@ -213,140 +211,140 @@ export const GOLDEN_CASES: GoldenCase[] = [
         id: "body.appointment",
         kind: "body",
         path: "/golden/body/appointment",
-        dto: CreateAppointmentDto,
+        dto: CreateAppointmentDtoSchema,
         input: {},
     },
     {
         id: "body.auth",
         kind: "body",
         path: "/golden/body/auth",
-        dto: ForgotPasswordDto,
+        dto: ForgotPasswordDtoSchema,
         input: { email: "bad" },
     },
     {
         id: "body.banner",
         kind: "body",
         path: "/golden/body/banner",
-        dto: CreateBannerDto,
+        dto: CreateBannerDtoSchema,
         input: {},
     },
     {
         id: "body.cart",
         kind: "body",
         path: "/golden/body/cart",
-        dto: AddToCartDto,
+        dto: AddToCartDtoSchema,
         input: { productId: "", amount: 0 },
     },
     {
         id: "body.category",
         kind: "body",
         path: "/golden/body/category",
-        dto: CreateCategoryDto,
+        dto: CreateCategoryDtoSchema,
         input: {},
     },
     {
         id: "body.coupon",
         kind: "body",
         path: "/golden/body/coupon",
-        dto: CreateCouponDto,
+        dto: CreateCouponDtoSchema,
         input: {},
     },
     {
         id: "body.feature",
         kind: "body",
         path: "/golden/body/feature",
-        dto: CreateFeatureDto,
+        dto: CreateFeatureDtoSchema,
         input: {},
     },
     {
         id: "body.loyalty",
         kind: "body",
         path: "/golden/body/loyalty",
-        dto: LoyaltyRewardDefinitionDto,
+        dto: LoyaltyRewardDefinitionDtoSchema,
         input: {},
     },
     {
         id: "body.order",
         kind: "body",
         path: "/golden/body/order",
-        dto: ChangeOrderStatusDto,
+        dto: ChangeOrderStatusDtoSchema,
         input: { idOrder: "", status: "BOGUS" },
     },
     {
         id: "body.permission",
         kind: "body",
         path: "/golden/body/permission",
-        dto: CreatePermissionDto,
+        dto: CreatePermissionDtoSchema,
         input: {},
     },
     {
         id: "body.product",
         kind: "body",
         path: "/golden/body/product",
-        dto: CreateProductDto,
+        dto: CreateProductDtoSchema,
         input: {},
     },
     {
         id: "body.role",
         kind: "body",
         path: "/golden/body/role",
-        dto: CreateRoleDto,
+        dto: CreateRoleDtoSchema,
         input: {},
     },
     {
         id: "body.service",
         kind: "body",
         path: "/golden/body/service",
-        dto: CreateServiceDto,
+        dto: CreateServiceDtoSchema,
         input: {},
     },
     {
         id: "body.slide",
         kind: "body",
         path: "/golden/body/slide",
-        dto: CreateSlideshowDto,
+        dto: CreateSlideshowDtoSchema,
         input: {},
     },
     {
         id: "body.staff",
         kind: "body",
         path: "/golden/body/staff",
-        dto: CreateStaffDto,
+        dto: CreateStaffDtoSchema,
         input: { email: "bad" },
     },
     {
         id: "body.tenant",
         kind: "body",
         path: "/golden/body/tenant",
-        dto: CreateTenantDto,
+        dto: CreateTenantDtoSchema,
         input: {},
     },
     {
         id: "body.user",
         kind: "body",
         path: "/golden/body/user",
-        dto: AssignRoleDto,
+        dto: AssignRoleDtoSchema,
         input: {},
     },
     {
         id: "body.whatsapp",
         kind: "body",
         path: "/golden/body/whatsapp",
-        dto: ConfigureWhatsAppDto,
+        dto: ConfigureWhatsAppDtoSchema,
         input: {},
     },
     {
         id: "body.appointment-query",
         kind: "body",
         path: "/golden/body/appointment-query",
-        dto: AvailabilityQueryDto,
+        dto: AvailabilityQueryDtoSchema,
         input: {},
     },
     {
         id: "body.list-query",
         kind: "body",
         path: "/golden/body/list-query",
-        dto: ActiveOnlyQueryDto,
+        dto: ActiveOnlyQueryDtoSchema,
         input: { activeOnly: "maybe" },
     },
 ];

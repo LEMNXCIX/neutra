@@ -67,7 +67,7 @@ export class SlideController {
         const tenantId = tenantIdOf(req);
         const { activeOnly } = (req.validatedQuery ?? {}) as ActiveOnlyQueryDto;
         // Slides historically default to showing all (no documented activeOnly param).
-        const activeOnlyFlag = activeOnly === "true";
+        const activeOnlyFlag = activeOnly === true;
 
         const result = await this.getSlidesUseCase.execute(tenantId, {
             activeOnly: activeOnlyFlag,

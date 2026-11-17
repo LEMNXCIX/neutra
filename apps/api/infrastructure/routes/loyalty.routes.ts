@@ -1,3 +1,7 @@
+import {
+    CreateLoyaltyCampaignDtoSchema,
+    UpdateLoyaltyCampaignDtoSchema,
+} from "@neutra/commons";
 import type { RequestHandler } from "express";
 import {
     type Application,
@@ -6,10 +10,7 @@ import {
     type Response,
     Router,
 } from "express";
-import {
-    CreateLoyaltyCampaignDto,
-    UpdateLoyaltyCampaignDto,
-} from "@/core/application/dtos/requests/loyalty.request";
+
 import { ROLE_CONSTANTS } from "@/core/domain/constants";
 import { ForbiddenError } from "@/core/domain/errors/domain-errors";
 import type { LoyaltyController } from "@/interface-adapters/controllers/loyalty.controller";
@@ -86,7 +87,7 @@ export function loyaltyRoutes(
         "/admin/campaigns",
         ...tenantGates,
         requirePermission("appointments:write"),
-        validateDto(CreateLoyaltyCampaignDto),
+        validateDto(CreateLoyaltyCampaignDtoSchema),
         loyaltyController.createCampaign,
     );
 
@@ -101,7 +102,7 @@ export function loyaltyRoutes(
         "/admin/campaigns/:campaignId",
         ...tenantGates,
         requirePermission("appointments:write"),
-        validateDto(UpdateLoyaltyCampaignDto),
+        validateDto(UpdateLoyaltyCampaignDtoSchema),
         loyaltyController.updateCampaign,
     );
 
