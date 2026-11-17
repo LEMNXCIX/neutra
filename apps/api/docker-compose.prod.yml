@@ -25,15 +25,29 @@ services:
         condition: service_healthy
     restart: always
 
-  # cms:  # Task 11: uncomment once apps/cms/Dockerfile lands.
-  #   build:
-  #     context: ../../
-  #     dockerfile: apps/cms/Dockerfile
-  #   environment:
-  #     - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
-  #   depends_on:
-  #     db:
-  #       condition: service_healthy
+  cms:
+    build:
+      # Monorepo root is the build context; the CMS Dockerfile lives under
+      # apps/cms. Run with: docker compose -f apps/api/docker-compose.prod.yml up
+      context: ../../
+      dockerfile: apps/cms/Dockerfile
+    environment:
+      - NODE_ENV=production
+      - DATABASE_CLIENT=postgres
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
+      - HOST=0.0.0.0
+      - PORT=1337
+      - APP_KEYS=${CMS_APP_KEYS:?CMS_APP_KEYS is required}
+      - API_TOKEN_SALT=${CMS_API_TOKEN_SALT:?CMS_API_TOKEN_SALT is required}
+      - ADMIN_JWT_SECRET=${CMS_ADMIN_JWT_SECRET:?CMS_ADMIN_JWT_SECRET is required}
+      - JWT_SECRET=${CMS_JWT_SECRET:?CMS_JWT_SECRET is required}
+      - ENCRYPTION_KEY=${CMS_ENCRYPTION_KEY:?CMS_ENCRYPTION_KEY is required}
+    ports:
+      - "${CMS_PORT:-1337}:${CMS_PORT:-1337}"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: always
 
   db:
     image: postgres:16-alpine

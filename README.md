@@ -8,7 +8,7 @@ lives at the root.
 
 - `apps/api/` — multi-tenant Express/TypeScript API (imported from
   `api-neutra-v2`, full git history preserved).
-- `apps/cms/` — Strapi CMS (imported in a later migration task).
+- `apps/cms/` — Strapi CMS (imported from `neutra-cms`, full git history preserved).
 - `packages/commons/` — `@neutra/commons`, the single source of truth for
   wire contracts shared between the API and the CMS.
 
