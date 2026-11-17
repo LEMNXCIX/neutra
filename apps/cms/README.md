@@ -8,7 +8,9 @@ The workspace is identified by its **folder** (`apps/cms`). The `name` field in
 
 ## Build
 
-Strapi has its own build pipeline and does not go through the root turbo graph:
+Strapi has its own build pipeline and does not go through the root turbo graph.
+The root `bun run build` deliberately **excludes** `apps/cms` (`--filter=!neutra-cms`)
+because `strapi build` is slow and env-dependent; build the CMS explicitly:
 
 ```bash
 bun install                    # from the monorepo root

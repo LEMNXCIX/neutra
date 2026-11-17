@@ -17,7 +17,7 @@ lives at the root.
 | Command | Description |
 | --- | --- |
 | `bun install` | Install all workspace dependencies (generates `bun.lock`). |
-| `bun run build` | Build every workspace via turbo (`^build` first). |
+| `bun run build` | Build API + commons via turbo (`^build` first); the CMS is excluded because its Strapi build is slow, env-dependent and runs separately (see `apps/cms/README.md`). |
 | `bun run typecheck` | Typecheck every workspace via turbo. |
 | `bun run test` | Run the workspace test suites via turbo. |
 | `bun run lint` | Lint every workspace via turbo. |
@@ -35,13 +35,14 @@ clean tree and an untouched frontend); run it with `node scripts/verify-dod.mjs`
 
 ## Known degradation: frontend error-code drift guard
 
-The drift guard in
-`neutra-frontend/src/lib/__tests__/error-codes.test.ts` no longer reads
-`../api-neutra-v2/types/error-codes.ts`. After this migration the authoritative
-wire error codes live in `@neutra/commons` inside this monorepo, so that test
-keeps passing against the old sibling-repo path without ever seeing codes added
-to — or removed from — the real source. The guard is therefore **blind until
-phase 2**, when `neutra-frontend` is incorporated as `apps/web` and the test is
-repointed at `@neutra/commons`. The `neutra-frontend` repository itself was not
-modified by this migration (`scripts/.frontend-baseline.txt` is the unchanged
-baseline verified by `scripts/verify-dod.mjs`).
+The drift guard in `neutra-frontend/src/lib/__tests__/error-codes.test.ts` was
+**not modified** by this migration — the `neutra-frontend` repository itself is
+left untouched (`scripts/.frontend-baseline.txt` is the unchanged baseline
+verified by `scripts/verify-dod.mjs`). It therefore **still reads** the literal
+path `../api-neutra-v2/types/error-codes.ts`. That path is now **stale**: the API
+was moved into `apps/api` in this monorepo, so the old sibling-repo file no
+longer resolves, while the authoritative wire error codes now live in
+`@neutra/commons` here. The test detects the missing file and silently skips the
+drift check (it does not fail), so the guard is **blind until phase 2**, when
+`neutra-frontend` is incorporated as `apps/web` and the test is repointed at
+`@neutra/commons`.

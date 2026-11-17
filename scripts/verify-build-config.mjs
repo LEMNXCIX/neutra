@@ -101,6 +101,31 @@ assert(
   "compose files must leave a documented slot for the cms service (Task 11)",
 );
 
+// --- Root .dockerignore (review fix C3) --------------------------------------
+// Docker reads .dockerignore from the build-context root, which is the
+// monorepo root for every API Dockerfile. The old apps/api/.dockerignore was
+// inert and has been removed.
+assert(existsSync(join(root, ".dockerignore")), "missing root .dockerignore (API build context is the monorepo root)");
+const rootDockerIgnore = read(".dockerignore");
+for (const pattern of [".env", "node_modules", "dist", ".git", ".turbo", ".jest-cache", "coverage"]) {
+  assert(rootDockerIgnore.includes(pattern), `root .dockerignore must exclude ${pattern}`);
+}
+assert(existsSync(join(root, "apps/cms/.dockerignore")), "missing apps/cms/.dockerignore (cms context is apps/cms)");
+
+// --- Root build excludes the CMS (review fix I1) -----------------------------
+const rootPkg = JSON.parse(read("package.json"));
+assert(
+  (rootPkg.scripts?.build ?? "").includes("--filter=!neutra-cms"),
+  "root build script must exclude neutra-cms (strapi build is separate and env-dependent)",
+);
+
+// --- Docker runtime is Node 22; prod deps are production-only (I2/I4) --------
+const prodDocker = read("apps/api/Dockerfile.prod");
+assert(/FROM node:22-/.test(prodDocker), "Dockerfile.prod runner must use a node:22-* image (D3)");
+assert(prodDocker.includes('CMD ["node", "dist/app.js"]'), "Dockerfile.prod must run node dist/app.js");
+assert(prodDocker.includes("bun install --production"), "Dockerfile.prod must install production-only dependencies (I4)");
+assert(/FROM node:22-/.test(read("apps/api/Dockerfile.dev")), "Dockerfile.dev must use a node:22-* runtime (D3)");
+
 // --- Build emits the production artifact (ruling T10-a) --------------------
 const distDir = join(root, "apps/api/dist");
 const appJs = join(distDir, "app.js");

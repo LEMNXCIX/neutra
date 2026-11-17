@@ -1,0 +1,50 @@
+# Docker reads .dockerignore from the BUILD CONTEXT root. Every API build uses
+# the monorepo root as its context (see apps/api/docker-compose*.yml:
+# context: ../../), so this file — not apps/api/.dockerignore — is the one that
+# actually applies. Paths are relative to the monorepo root.
+
+# VCS and local editor/tooling metadata — never bake into an image.
+.git
+.gitignore
+.github
+.agents
+.opencode
+.vscode
+.vs
+
+# Secrets. The API/CMS Dockerfiles inject configuration via compose env vars;
+# a host .env must never be copied into a layer.
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Dependencies and build artefacts. These are recreated inside the image:
+#   - bun install --frozen-lockfile rebuilds node_modules
+#   - the builder runs `bun run --cwd packages/commons build` and the API build
+#     to produce fresh dist/ (a stale host dist would otherwise be shipped).
+node_modules
+**/node_modules
+dist
+**/dist
+.turbo
+**/.turbo
+.jest-cache
+**/.jest-cache
+coverage
+**/coverage
+.output
+**/.output
+.build
+**/.build
+.strapi
+**/.strapi
+.tmp
+**/.tmp
+*.tsbuildinfo
+**/*.tsbuildinfo
+
+# Local logs / OS noise.
+*.log
+npm-debug.log*
+.DS_Store

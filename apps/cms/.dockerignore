@@ -1,0 +1,19 @@
+# The cms service uses apps/cms as its own build context (context: ../cms in
+# apps/api/docker-compose*.yml). Docker reads this file for that context; the
+# monorepo-root .dockerignore does not apply to it.
+node_modules
+dist
+build
+.output
+.strapi
+.tmp
+.env
+.env.*
+.git
+.gitignore
+.turbo
+.jest-cache
+coverage
+*.tsbuildinfo
+npm-debug.log*
+.DS_Store
