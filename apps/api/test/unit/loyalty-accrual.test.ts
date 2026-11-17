@@ -46,7 +46,9 @@ function appointment(
     };
 }
 
-function statusUseCase(currentStatus = AppointmentStatus.IN_PROGRESS) {
+function statusUseCase(
+    currentStatus: AppointmentStatus = AppointmentStatus.IN_PROGRESS,
+) {
     const appointmentRepository = {
         findById: jest.fn().mockResolvedValue(appointment(currentStatus)),
         updateStatus: jest.fn(),
@@ -543,7 +545,7 @@ describe("Prisma appointment loyalty transaction", () => {
 
     test("propagates a ledger failure so the status transaction rolls back", async () => {
         const error = new Error("ledger write failed");
-        let currentStatus = AppointmentStatus.IN_PROGRESS;
+        let currentStatus: AppointmentStatus = AppointmentStatus.IN_PROGRESS;
         const transaction = useTransactionCallback();
         transaction.mockImplementation(
             async (callback: (tx: typeof prisma) => Promise<unknown>) => {

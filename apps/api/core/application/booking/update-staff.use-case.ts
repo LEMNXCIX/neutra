@@ -13,7 +13,7 @@ import type {
 import type { ITenantRepository } from "@/core/repositories/tenant.repository.interface";
 import type { IUserRepository } from "@/core/repositories/user.repository.interface";
 import { Success, type UseCaseResult } from "@/core/utils/use-case-result";
-import { BusinessErrorCodes } from "@/types/error-codes";
+import { BusinessErrorCodes } from "@neutra/commons";
 
 export class UpdateStaffUseCase {
     constructor(

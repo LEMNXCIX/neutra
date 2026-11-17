@@ -9,7 +9,7 @@ import type { IRoleRepository } from "@/core/repositories/role.repository.interf
 import type { ITenantRepository } from "@/core/repositories/tenant.repository.interface";
 import type { IUserRepository } from "@/core/repositories/user.repository.interface";
 import { Success, type UseCaseResult } from "@/core/utils/use-case-result";
-import { AuthErrorCodes, TenantErrorCodes } from "@/types/error-codes";
+import { AuthErrorCodes, TenantErrorCodes } from "@neutra/commons";
 
 /**
  * The caller of registration: an existing identity that already holds an

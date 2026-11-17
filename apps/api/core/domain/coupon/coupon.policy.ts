@@ -1,6 +1,6 @@
 import { BusinessRuleViolationError } from "@/core/domain/errors/domain-errors";
 import { type Coupon, CouponType } from "@/core/entities/coupon.entity";
-import { BusinessErrorCodes, LoyaltyErrorCodes } from "@/types/error-codes";
+import { BusinessErrorCodes, LoyaltyErrorCodes } from "@neutra/commons";
 
 export function isPersonalCoupon(coupon: { ownerId?: string | null }): boolean {
     return coupon.ownerId !== undefined && coupon.ownerId !== null;

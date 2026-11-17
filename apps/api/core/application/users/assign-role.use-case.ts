@@ -8,7 +8,7 @@ import type { IRoleRepository } from "@/core/repositories/role.repository.interf
 import type { IStaffRepository } from "@/core/repositories/staff.repository.interface";
 import type { IUserRepository } from "@/core/repositories/user.repository.interface";
 import { Success, type UseCaseResult } from "@/core/utils/use-case-result";
-import { TenantErrorCodes } from "@/types/error-codes";
+import { TenantErrorCodes } from "@neutra/commons";
 
 /**
  * `addTenant` is an upsert on `UserTenant @@unique([userId, tenantId])`, so

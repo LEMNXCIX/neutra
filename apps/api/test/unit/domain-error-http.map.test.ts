@@ -6,10 +6,8 @@ import {
     UnauthorizedError,
     ValidationError,
 } from "@/core/domain/errors/domain-errors";
-import {
-    BusinessErrorCodes,
-    httpStatusFromDomainError,
-} from "@/types/error-codes";
+import { BusinessErrorCodes } from "@neutra/commons";
+import { httpStatusFromDomainError } from "@/types/error-status";
 
 describe("Domain error → HTTP mapping", () => {
     test("maps by error class even with custom codes", () => {

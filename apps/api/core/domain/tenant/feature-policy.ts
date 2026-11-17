@@ -4,7 +4,7 @@
  * must stay byte-identical.
  */
 
-import { TenantErrorCodes } from "@/types/error-codes";
+import { TenantErrorCodes } from "@neutra/commons";
 
 export type TenantGateDecision =
     | { allowed: true }

@@ -1,6 +1,6 @@
 import { prisma } from "@/config/db.config";
 import { PrismaOrderRepository } from "@/infrastructure/database/prisma/order.prisma-repository";
-import { BusinessErrorCodes } from "@/types/error-codes";
+import { BusinessErrorCodes } from "@neutra/commons";
 
 function couponRow(overrides: Record<string, unknown> = {}) {
     return {

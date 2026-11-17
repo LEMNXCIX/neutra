@@ -2,7 +2,8 @@ import type { NextFunction, Request, Response } from "express";
 import type { ResolveAuthenticatedUserUseCase } from "@/core/application/auth/resolve-authenticated-user.use-case";
 import { DomainError } from "@/core/domain/errors/domain-errors";
 import { extractAuthToken } from "@/helpers/auth-token.helpers";
-import { AuthErrorCodes, httpStatusFromDomainError } from "@/types/error-codes";
+import { AuthErrorCodes } from "@neutra/commons";
+import { httpStatusFromDomainError } from "@/types/error-status";
 
 export function createAuthenticateMiddleware(deps: {
     resolveUser: ResolveAuthenticatedUserUseCase;

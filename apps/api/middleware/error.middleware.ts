@@ -4,12 +4,16 @@ import { isProduction } from "@/core/domain/constants";
 import { DomainError } from "@/core/domain/errors/domain-errors";
 import type { ILogger } from "@/core/providers/logger.interface";
 import { LogLevel, logLevelForStatus } from "@/core/providers/logger.interface";
-import { ApiResponse, AppError, type ErrorDetail } from "@/types/api-response";
+import {
+    ApiResponse,
+    type ErrorDetail,
+    SystemErrorCodes,
+} from "@neutra/commons";
+import { AppError } from "@/types/app-error";
 import {
     getHttpStatusFromErrorCode,
     httpStatusFromDomainError,
-    SystemErrorCodes,
-} from "@/types/error-codes";
+} from "@/types/error-status";
 
 const showStack = !isProduction(config.ENVIRONMENT);
 

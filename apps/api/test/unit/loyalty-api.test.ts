@@ -33,7 +33,7 @@ import {
     requireConcreteTenantContext,
     requireTenantType,
 } from "@/middleware/tenant-feature.middleware";
-import { AuthErrorCodes } from "@/types/error-codes";
+import { AuthErrorCodes } from "@neutra/commons";
 
 jest.mock("@/middleware/tenant-feature.middleware", () => ({
     requireConcreteTenantContext: jest.fn(

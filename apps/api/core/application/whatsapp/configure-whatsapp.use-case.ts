@@ -7,7 +7,7 @@ import type { WhatsAppConfig } from "@/core/entities/whatsapp-config.entity";
 import type { IFeatureRepository } from "@/core/repositories/feature.repository.interface";
 import type { IWhatsAppConfigRepository } from "@/core/repositories/whatsapp-config.repository.interface";
 import { Success, type UseCaseResult } from "@/core/utils/use-case-result";
-import { AuthErrorCodes, ValidationErrorCodes } from "@/types/error-codes";
+import { AuthErrorCodes, ValidationErrorCodes } from "@neutra/commons";
 
 export class ConfigureWhatsAppUseCase {
     constructor(

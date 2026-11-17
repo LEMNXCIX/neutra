@@ -1,8 +1,7 @@
 import { plainToInstance } from "class-transformer";
 import { type ValidationError, validate } from "class-validator";
 import type { NextFunction, Request, Response } from "express";
-import type { ErrorDetail } from "@/types/api-response";
-import { ValidationErrorCodes } from "@/types/error-codes";
+import { type ErrorDetail, ValidationErrorCodes } from "@neutra/commons";
 
 export const validateDto = <T>(ctor: new () => T) => {
     return async (

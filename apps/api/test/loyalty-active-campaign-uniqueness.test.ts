@@ -7,7 +7,7 @@ import {
     LoyaltyCampaignStatus,
 } from "@/core/entities/loyalty.entity";
 import { PrismaLoyaltyRepository } from "@/infrastructure/database/prisma/loyalty.prisma-repository";
-import { LoyaltyErrorCodes } from "@/types/error-codes";
+import { LoyaltyErrorCodes } from "@neutra/commons";
 
 /**
  * A tenant may have only one ACTIVE campaign at a time, because an event has to

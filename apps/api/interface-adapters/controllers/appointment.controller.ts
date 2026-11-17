@@ -28,8 +28,8 @@ import { present } from "@/core/utils/use-case-result";
 import { currentUser, tenantIdOf } from "@/helpers/request-context.helpers";
 import { resolveRequestOrigin } from "@/helpers/request-origin.helpers";
 import { APPOINTMENT_OPERATIONAL_ROLES } from "@/middleware/authorization.middleware";
-import { AppError } from "@/types/api-response";
-import { TenantErrorCodes } from "@/types/error-codes";
+import { AppError } from "@/types/app-error";
+import { TenantErrorCodes } from "@neutra/commons";
 import type { AuthenticatedUser } from "@/types/rbac";
 
 function getAppointmentActor(

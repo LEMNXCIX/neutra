@@ -15,7 +15,7 @@ import {
     BusinessErrorCodes,
     ResourceErrorCodes,
     ValidationErrorCodes,
-} from "@/types/error-codes";
+} from "@neutra/commons";
 
 const TENANT_ID = "tenant-1";
 const now = new Date("2030-01-15T00:00:00.000Z");

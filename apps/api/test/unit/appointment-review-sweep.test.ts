@@ -152,13 +152,15 @@ describe("SweepAppointmentReviewsUseCase", () => {
     test("does not transition the same candidate twice on repeated execution", async () => {
         const repository = createRepository();
         const now = new Date("2030-01-01T13:00:00.000Z");
-        let status = AppointmentStatus.CONFIRMED;
+        let status: AppointmentStatus = AppointmentStatus.CONFIRMED;
         repository.findReviewCandidates.mockImplementation(async () =>
-            [
-                AppointmentStatus.PENDING,
-                AppointmentStatus.CONFIRMED,
-                AppointmentStatus.IN_PROGRESS,
-            ].includes(status)
+            (
+                [
+                    AppointmentStatus.PENDING,
+                    AppointmentStatus.CONFIRMED,
+                    AppointmentStatus.IN_PROGRESS,
+                ] as AppointmentStatus[]
+            ).includes(status)
                 ? [candidate({ status })]
                 : [],
         );

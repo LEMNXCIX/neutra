@@ -5,7 +5,7 @@ import { evaluateTenantActive } from "@/core/domain/tenant/feature-policy";
 import type { Tenant } from "@/core/entities/tenant.entity";
 import type { ILogger } from "@/core/providers/logger.interface";
 import type { ITenantRepository } from "@/core/repositories/tenant.repository.interface";
-import { ErrorCodes } from "@/types/error-codes";
+import { ErrorCodes } from "@neutra/commons";
 
 function isManagementRoute(normalizedPath: string): boolean {
     return TENANT_HTTP_CONSTANTS.MANAGEMENT_PATH_PREFIXES.some((prefix) =>

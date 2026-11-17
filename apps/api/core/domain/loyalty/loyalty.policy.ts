@@ -12,7 +12,7 @@ import {
     LoyaltyStatus,
 } from "@/core/entities/loyalty.entity";
 import { TenantType } from "@/core/entities/tenant.entity";
-import { BusinessErrorCodes, LoyaltyErrorCodes } from "@/types/error-codes";
+import { BusinessErrorCodes, LoyaltyErrorCodes } from "@neutra/commons";
 
 export const MAX_LOYALTY_PRISMA_INT = 2_147_483_647;
 

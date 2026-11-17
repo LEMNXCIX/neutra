@@ -1,12 +1,6 @@
-export interface WhatsAppConversation {
-    id: string;
-    tenantId: string;
-    waConversationId: string;
-    phoneNumber: string;
-    userId?: string | null;
-    status: string;
-    context?: Record<string, unknown>;
-    lastMessageAt: Date;
-    createdAt: Date;
-    updatedAt: Date;
-}
+/**
+ * Local contract shim. The definition now lives in `@neutra/commons`; this
+ * module only re-exports it so existing `@/core/entities/*` imports keep
+ * working while the API migrates. No definitions are duplicated here.
+ */
+export type { WhatsAppConversation } from "@neutra/commons";

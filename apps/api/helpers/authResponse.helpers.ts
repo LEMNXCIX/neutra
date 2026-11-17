@@ -2,7 +2,7 @@ import type { CookieOptions, Request, Response } from "express";
 import config from "@/config/index.config";
 import { DOMAIN_CONSTANTS } from "@/config/infrastructure-constants";
 import { AUTH_CONSTANTS, isProduction } from "@/core/domain/constants";
-import type { ErrorDetail } from "@/types/api-response";
+import type { ErrorDetail } from "@neutra/commons";
 
 /**
  * Result bag produced by the auth use cases and the OAuth provider callbacks.

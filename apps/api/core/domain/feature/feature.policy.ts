@@ -1,5 +1,5 @@
 import { BusinessRuleViolationError } from "@/core/domain/errors/domain-errors";
-import { BusinessErrorCodes } from "@/types/error-codes";
+import { BusinessErrorCodes } from "@neutra/commons";
 
 export function assertTenantFeatureDependencies(
     features: Record<string, boolean>,

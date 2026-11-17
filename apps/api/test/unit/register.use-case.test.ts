@@ -1,5 +1,5 @@
 import { RegisterUseCase } from "@/core/application/auth/register.use-case";
-import { AuthErrorCodes } from "@/types/error-codes";
+import { AuthErrorCodes } from "@neutra/commons";
 
 const EMAIL = "emelec_leo@outlook.com";
 const BOOK_TENANT = {

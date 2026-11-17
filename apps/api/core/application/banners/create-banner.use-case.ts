@@ -5,7 +5,7 @@ import type {
     IBannerRepository,
 } from "@/core/repositories/banner.repository.interface";
 import { Success, type UseCaseResult } from "@/core/utils/use-case-result";
-import { ValidationErrorCodes } from "@/types/error-codes";
+import { ValidationErrorCodes } from "@neutra/commons";
 
 export class CreateBannerUseCase {
     constructor(private bannerRepository: IBannerRepository) {}

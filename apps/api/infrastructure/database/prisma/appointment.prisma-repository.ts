@@ -37,7 +37,7 @@ import type {
     IAppointmentRepository,
 } from "@/core/repositories/appointment.repository.interface";
 import { extractTenantTimezone } from "@/core/utils/tenant-time";
-import { BusinessErrorCodes } from "@/types/error-codes";
+import { BusinessErrorCodes } from "@neutra/commons";
 
 type AppointmentStatusAuditFields = {
     statusChangedAt?: Date | null;

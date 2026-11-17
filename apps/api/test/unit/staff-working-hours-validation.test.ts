@@ -5,7 +5,7 @@ import type { IRoleRepository } from "@/core/repositories/role.repository.interf
 import type { IStaffRepository } from "@/core/repositories/staff.repository.interface";
 import type { ITenantRepository } from "@/core/repositories/tenant.repository.interface";
 import type { IUserRepository } from "@/core/repositories/user.repository.interface";
-import { BusinessErrorCodes } from "@/types/error-codes";
+import { BusinessErrorCodes } from "@neutra/commons";
 
 function setup() {
     const staffRepository = {

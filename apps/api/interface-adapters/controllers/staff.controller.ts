@@ -16,8 +16,8 @@ import type {
 import { StaffResponse } from "@/core/application/dtos/responses/staff/staff.response";
 import { present } from "@/core/utils/use-case-result";
 import { currentUser, tenantIdOf } from "@/helpers/request-context.helpers";
-import { AppError } from "@/types/api-response";
-import { AuthErrorCodes } from "@/types/error-codes";
+import { AppError } from "@/types/app-error";
+import { AuthErrorCodes } from "@neutra/commons";
 
 export class StaffController {
     constructor(

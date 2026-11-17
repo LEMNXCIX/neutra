@@ -1,19 +1,6 @@
-export interface Banner {
-    id: string;
-    title: string;
-    subtitle: string | null;
-    description: string | null;
-    imageUrl: string | null;
-    backgroundColor: string | null;
-    textColor: string | null;
-    cta: string | null;
-    ctaUrl: string | null;
-    priority: number;
-    active: boolean;
-    startsAt: Date;
-    endsAt: Date;
-    impressions: number;
-    clicks: number;
-    createdAt: Date;
-    updatedAt: Date;
-}
+/**
+ * Local contract shim. The definition now lives in `@neutra/commons`; this
+ * module only re-exports it so existing `@/core/entities/*` imports keep
+ * working while the API migrates. No definitions are duplicated here.
+ */
+export type { Banner } from "@neutra/commons";

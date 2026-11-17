@@ -7,7 +7,7 @@ import {
     ValidationError,
 } from "@/core/domain/errors/domain-errors";
 import { LogLevel, logLevelForStatus } from "@/core/providers/logger.interface";
-import { httpStatusFromDomainError } from "@/types/error-codes";
+import { httpStatusFromDomainError } from "@/types/error-status";
 
 /**
  * A 4xx is the caller's problem and the expected answer to a malformed or

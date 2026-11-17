@@ -14,7 +14,7 @@ import type { IQueueProvider } from "@/core/providers/queue-provider.interface";
 import type { IAppointmentRepository } from "@/core/repositories/appointment.repository.interface";
 import type { IFeatureRepository } from "@/core/repositories/feature.repository.interface";
 import { Success, type UseCaseResult } from "@/core/utils/use-case-result";
-import { BusinessErrorCodes } from "@/types/error-codes";
+import { BusinessErrorCodes } from "@neutra/commons";
 
 export class CancelAppointmentUseCase {
     constructor(

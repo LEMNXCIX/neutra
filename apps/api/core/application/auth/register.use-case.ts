@@ -17,7 +17,7 @@ import type {
     UserCreateData,
 } from "@/core/repositories/user.repository.interface";
 import { Success, type UseCaseResult } from "@/core/utils/use-case-result";
-import { AuthErrorCodes } from "@/types/error-codes";
+import { AuthErrorCodes } from "@neutra/commons";
 
 export class RegisterUseCase {
     constructor(

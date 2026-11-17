@@ -1,6 +1,6 @@
 import { BusinessRuleViolationError } from "@/core/domain/errors/domain-errors";
 import { AppointmentStatus } from "@/core/entities/appointment.entity";
-import { BusinessErrorCodes } from "@/types/error-codes";
+import { BusinessErrorCodes } from "@neutra/commons";
 
 /**
  * The single owner of which appointment status a caller may set by hand.

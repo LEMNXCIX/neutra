@@ -60,7 +60,8 @@ import { Success } from "@/core/utils/use-case-result";
 import { PrismaFeatureRepository } from "@/infrastructure/database/prisma/feature.prisma-repository";
 import { FeatureController } from "@/interface-adapters/controllers/feature.controller";
 import { requireSuperAdmin } from "@/middleware/authorization.middleware";
-import { AuthErrorCodes, httpStatusFromDomainError } from "@/types/error-codes";
+import { AuthErrorCodes } from "@neutra/commons";
+import { httpStatusFromDomainError } from "@/types/error-status";
 
 /**
  * Records every call the RBAC middleware makes into the domain policy while

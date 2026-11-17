@@ -5,7 +5,7 @@ import type { IAppointmentRepository } from "@/core/repositories/appointment.rep
 import type { IServiceRepository } from "@/core/repositories/service.repository.interface";
 import type { IStaffRepository } from "@/core/repositories/staff.repository.interface";
 import type { ITenantRepository } from "@/core/repositories/tenant.repository.interface";
-import { BusinessErrorCodes } from "@/types/error-codes";
+import { BusinessErrorCodes } from "@neutra/commons";
 
 // 2030-01-04 is a Friday, 2030-01-06 is a Sunday. Local noon avoids TZ day shifts.
 const FRIDAY = "2030-01-04T12:00:00";

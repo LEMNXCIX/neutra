@@ -27,7 +27,7 @@ import type {
 } from "@/core/repositories/loyalty.repository.interface";
 import type { ITenantRepository } from "@/core/repositories/tenant.repository.interface";
 import { Success, type UseCaseResult } from "@/core/utils/use-case-result";
-import { ValidationErrorCodes } from "@/types/error-codes";
+import { ValidationErrorCodes } from "@neutra/commons";
 
 export class UpdateLoyaltyCampaignUseCase {
     constructor(

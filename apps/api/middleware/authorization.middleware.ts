@@ -10,7 +10,7 @@ import {
     hasPermission,
     isSuperAdmin,
 } from "@/core/domain/rbac/access-policy";
-import { AuthErrorCodes } from "@/types/error-codes";
+import { AuthErrorCodes } from "@neutra/commons";
 
 export const APPOINTMENT_OPERATIONAL_ROLES = [
     "STAFF",

@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
-import { ResourceErrorCodes } from "@/types/error-codes";
+import { ResourceErrorCodes } from "@neutra/commons";
 
 /**
  * Middleware to handle 404 Not Found errors for non-existent routes

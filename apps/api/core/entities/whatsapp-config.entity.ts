@@ -1,26 +1,10 @@
-export interface WhatsAppTemplate {
-    name: string;
-    language: string;
-}
-
-export interface BotConfig {
-    welcomeMessage?: string;
-    awayMessage?: string;
-    businessHours?: { start: string; end: string };
-}
-
-export interface WhatsAppConfig {
-    id: string;
-    tenantId: string;
-    phoneNumberId: string;
-    businessAccountId: string;
-    accessToken: string;
-    webhookVerifyToken: string;
-    enabled: boolean;
-    notificationsEnabled: boolean;
-    botEnabled: boolean;
-    templates?: WhatsAppTemplate[];
-    botConfig?: BotConfig;
-    createdAt: Date;
-    updatedAt: Date;
-}
+/**
+ * Local contract shim. The definition now lives in `@neutra/commons`; this
+ * module only re-exports it so existing `@/core/entities/*` imports keep
+ * working while the API migrates. No definitions are duplicated here.
+ */
+export type {
+    WhatsAppTemplate,
+    BotConfig,
+    WhatsAppConfig,
+} from "@neutra/commons";

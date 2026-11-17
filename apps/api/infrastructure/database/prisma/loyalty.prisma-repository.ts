@@ -45,7 +45,7 @@ import {
     mapCoupon,
     toCouponType,
 } from "@/infrastructure/database/prisma/coupon-mapper";
-import { LoyaltyErrorCodes, ValidationErrorCodes } from "@/types/error-codes";
+import { LoyaltyErrorCodes, ValidationErrorCodes } from "@neutra/commons";
 
 type CouponRecord = {
     id: string;

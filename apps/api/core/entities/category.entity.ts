@@ -1,17 +1,7 @@
-export enum CategoryType {
-    PRODUCT = "PRODUCT",
-    SERVICE = "SERVICE",
-}
-
-export interface Category {
-    id: string;
-    name: string;
-    description?: string | null;
-    type: CategoryType;
-    active: boolean;
-    tenantId: string;
-    tenant?: { id: string; name: string; slug: string };
-    productCount?: number;
-    createdAt: Date;
-    updatedAt: Date;
-}
+/**
+ * Local contract shim. The definition now lives in `@neutra/commons`; this
+ * module only re-exports it so existing `@/core/entities/*` imports keep
+ * working while the API migrates. No definitions are duplicated here.
+ */
+export { CategoryType } from "@neutra/commons";
+export type { Category } from "@neutra/commons";

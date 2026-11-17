@@ -7,7 +7,7 @@ import {
 import type { ITokenGenerator } from "@/core/providers/auth-providers.interface";
 import type { ICacheProvider } from "@/core/providers/cache-provider.interface";
 import type { IUserRepository } from "@/core/repositories/user.repository.interface";
-import { AuthErrorCodes, TenantErrorCodes } from "@/types/error-codes";
+import { AuthErrorCodes, TenantErrorCodes } from "@neutra/commons";
 
 export type ResolveAuthInput = {
     token: string;

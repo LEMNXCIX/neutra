@@ -39,7 +39,7 @@ import type { User } from "@/core/entities/user.entity";
 import { Success } from "@/core/utils/use-case-result";
 import { PrismaUserRepository } from "@/infrastructure/database/prisma/user.prisma-repository";
 import { UserController } from "@/interface-adapters/controllers/user.controller";
-import { TenantErrorCodes } from "@/types/error-codes";
+import { TenantErrorCodes } from "@neutra/commons";
 
 const ATTACKER_TENANT = "tenant-attacker";
 const VICTIM_TENANT = "tenant-victim";

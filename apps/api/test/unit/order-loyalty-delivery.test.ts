@@ -4,7 +4,7 @@ import { UpdateOrderUseCase } from "@/core/application/order/update-order.use-ca
 import type { Order, OrderStatus } from "@/core/entities/order.entity";
 import type { IOrderRepository } from "@/core/repositories/order.repository.interface";
 import { PrismaOrderRepository } from "@/infrastructure/database/prisma/order.prisma-repository";
-import { BusinessErrorCodes } from "@/types/error-codes";
+import { BusinessErrorCodes } from "@neutra/commons";
 
 function order(status: OrderStatus): Order {
     return {

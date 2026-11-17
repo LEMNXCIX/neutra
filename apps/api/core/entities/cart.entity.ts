@@ -1,17 +1,6 @@
-import type { Product } from "@/core/entities/product.entity";
-
-export interface CartItem {
-    id: string;
-    cartId: string;
-    productId: string;
-    amount: number;
-    product?: Pick<Product, "id" | "name" | "price" | "image" | "stock">;
-}
-
-export interface Cart {
-    id: string;
-    userId: string;
-    items: CartItem[];
-    createdAt: Date;
-    updatedAt: Date;
-}
+/**
+ * Local contract shim. The definition now lives in `@neutra/commons`; this
+ * module only re-exports it so existing `@/core/entities/*` imports keep
+ * working while the API migrates. No definitions are duplicated here.
+ */
+export type { Cart, CartItem } from "@neutra/commons";

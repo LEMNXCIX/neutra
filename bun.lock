@@ -12,6 +12,7 @@
       "name": "api-neutra-v2",
       "version": "1.0.0",
       "dependencies": {
+        "@neutra/commons": "workspace:*",
         "@prisma/adapter-pg": "7.10.1",
         "@prisma/client": "7.10.1",
         "@scalar/express-api-reference": "^0.10.2",

@@ -37,7 +37,7 @@ const created: string[] = [];
 let references: { userId: string; serviceId: string; staffId: string };
 
 async function createAppointment(
-    status = AppointmentStatus.PENDING,
+    status: AppointmentStatus = AppointmentStatus.PENDING,
 ): Promise<string> {
     const created_ = await prisma.appointment.create({
         data: {

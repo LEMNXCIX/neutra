@@ -33,7 +33,7 @@ import type {
     OrderStatusUpdate,
     OrderUpdateData,
 } from "@/core/repositories/order.repository.interface";
-import { BusinessErrorCodes } from "@/types/error-codes";
+import { BusinessErrorCodes } from "@neutra/commons";
 
 type OrderWithIncludes = Prisma.OrderGetPayload<{
     include: {

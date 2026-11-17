@@ -6,7 +6,7 @@ import { UpdateTenantFeaturesUseCase } from "@/core/application/tenant/update-te
 import { assertTenantFeatureDependencies } from "@/core/domain/feature/feature.policy";
 import { TenantType } from "@/core/entities/tenant.entity";
 import { PrismaLoyaltyRepository } from "@/infrastructure/database/prisma/loyalty.prisma-repository";
-import { BusinessErrorCodes } from "@/types/error-codes";
+import { BusinessErrorCodes } from "@neutra/commons";
 
 function createUseCase() {
     const tenantRepository = {

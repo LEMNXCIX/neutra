@@ -7,7 +7,7 @@ import {
 import type { IFeatureRepository } from "@/core/repositories/feature.repository.interface";
 import type { ILoyaltyRepository } from "@/core/repositories/loyalty.repository.interface";
 import { Success, type UseCaseResult } from "@/core/utils/use-case-result";
-import { BusinessErrorCodes } from "@/types/error-codes";
+import { BusinessErrorCodes } from "@neutra/commons";
 
 export class UpdateTenantFeaturesUseCase {
     constructor(

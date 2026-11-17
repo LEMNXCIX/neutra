@@ -5,7 +5,7 @@ import {
     EntityNotFoundError,
 } from "@/core/domain/errors/domain-errors";
 import { OrderController } from "@/interface-adapters/controllers/order.controller";
-import { BusinessErrorCodes } from "@/types/error-codes";
+import { BusinessErrorCodes } from "@neutra/commons";
 
 const CART_ITEM = {
     id: "p1",

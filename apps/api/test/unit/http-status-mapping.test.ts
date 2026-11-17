@@ -3,7 +3,6 @@ import {
     BusinessErrorCodes,
     DatabaseErrorCodes,
     ExternalServiceErrorCodes,
-    getHttpStatusFromErrorCode,
     LoyaltyErrorCodes,
     RateLimitErrorCodes,
     ResourceErrorCodes,
@@ -11,7 +10,8 @@ import {
     TenantErrorCodes,
     ValidationErrorCodes,
     WhatsAppErrorCodes,
-} from "@/types/error-codes";
+} from "@neutra/commons";
+import { getHttpStatusFromErrorCode } from "@/types/error-status";
 
 /**
  * This mapper is reached live from the global error middleware for every

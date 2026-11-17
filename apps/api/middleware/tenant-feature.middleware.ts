@@ -5,7 +5,7 @@ import {
     evaluateTenantType,
 } from "@/core/domain/tenant/feature-policy";
 import type { IFeatureRepository } from "@/core/repositories/feature.repository.interface";
-import { TenantErrorCodes } from "@/types/error-codes";
+import { TenantErrorCodes } from "@neutra/commons";
 
 function hasConcreteTenant(req: Request): boolean {
     if (typeof req.tenantId !== "string") return false;

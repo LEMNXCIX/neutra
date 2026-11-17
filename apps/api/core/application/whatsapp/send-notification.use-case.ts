@@ -2,7 +2,7 @@ import type { SendNotificationDTO } from "@/core/application/dtos/requests/whats
 import { ValidationError } from "@/core/domain/errors/domain-errors";
 import type { IWhatsAppService } from "@/core/ports/whatsapp-service.interface";
 import { Success, type UseCaseResult } from "@/core/utils/use-case-result";
-import { ValidationErrorCodes } from "@/types/error-codes";
+import { ValidationErrorCodes } from "@neutra/commons";
 
 export class SendNotificationUseCase {
     constructor(private whatsappService: IWhatsAppService) {}

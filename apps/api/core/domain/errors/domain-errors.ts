@@ -3,7 +3,7 @@ import {
     BusinessErrorCodes,
     ResourceErrorCodes,
     ValidationErrorCodes,
-} from "@/types/error-codes";
+} from "@neutra/commons";
 
 export class DomainError extends Error {
     constructor(

@@ -12,7 +12,7 @@ import {
 } from "@/core/entities/loyalty.entity";
 import { PrismaCouponRepository } from "@/infrastructure/database/prisma/coupon.prisma-repository";
 import { PrismaLoyaltyRepository } from "@/infrastructure/database/prisma/loyalty.prisma-repository";
-import { LoyaltyErrorCodes, ValidationErrorCodes } from "@/types/error-codes";
+import { LoyaltyErrorCodes, ValidationErrorCodes } from "@neutra/commons";
 
 const now = new Date("2030-01-01T00:00:00.000Z");
 const startsAt = new Date("2029-12-01T00:00:00.000Z");

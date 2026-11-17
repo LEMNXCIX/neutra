@@ -7,7 +7,7 @@ import {
     ValidationError,
 } from "@/core/domain/errors/domain-errors";
 import { PrismaUserRepository } from "@/infrastructure/database/prisma/user.prisma-repository";
-import { TenantErrorCodes } from "@/types/error-codes";
+import { TenantErrorCodes } from "@neutra/commons";
 
 const ATTACKER_TENANT = "tenant-attacker";
 const VICTIM_TENANT = "tenant-victim";

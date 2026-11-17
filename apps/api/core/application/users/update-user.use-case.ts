@@ -5,7 +5,7 @@ import {
 import type { User } from "@/core/entities/user.entity";
 import type { IUserRepository } from "@/core/repositories/user.repository.interface";
 import { Success, type UseCaseResult } from "@/core/utils/use-case-result";
-import { TenantErrorCodes } from "@/types/error-codes";
+import { TenantErrorCodes } from "@neutra/commons";
 
 /**
  * A user belongs to several tenants (`UserTenant @@unique([userId, tenantId])`),

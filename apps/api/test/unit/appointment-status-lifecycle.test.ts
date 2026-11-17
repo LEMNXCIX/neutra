@@ -14,7 +14,7 @@ import {
 import type { IAppointmentRepository } from "@/core/repositories/appointment.repository.interface";
 import { PrismaAppointmentRepository } from "@/infrastructure/database/prisma/appointment.prisma-repository";
 import { APPOINTMENT_OPERATIONAL_ROLES } from "@/middleware/authorization.middleware";
-import { AuthErrorCodes, BusinessErrorCodes } from "@/types/error-codes";
+import { AuthErrorCodes, BusinessErrorCodes } from "@neutra/commons";
 import type { AuthenticatedUser } from "@/types/rbac";
 
 const manager = {

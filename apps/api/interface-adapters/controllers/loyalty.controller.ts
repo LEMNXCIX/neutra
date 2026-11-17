@@ -24,7 +24,7 @@ import {
     AuthErrorCodes,
     TenantErrorCodes,
     ValidationErrorCodes,
-} from "@/types/error-codes";
+} from "@neutra/commons";
 import type { AuthenticatedUser } from "@/types/rbac";
 
 function requireUserId(req: Request): string {

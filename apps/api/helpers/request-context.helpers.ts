@@ -1,6 +1,6 @@
 import type { Request } from "express";
-import { AppError } from "@/types/api-response";
-import { AuthErrorCodes, TenantErrorCodes } from "@/types/error-codes";
+import { AppError } from "@/types/app-error";
+import { AuthErrorCodes, TenantErrorCodes } from "@neutra/commons";
 import type { AuthenticatedUser } from "@/types/rbac";
 
 /**

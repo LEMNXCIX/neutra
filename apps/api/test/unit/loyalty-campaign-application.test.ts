@@ -18,7 +18,7 @@ import {
 } from "@/core/entities/loyalty.entity";
 import { TenantType } from "@/core/entities/tenant.entity";
 import { PrismaLoyaltyRepository } from "@/infrastructure/database/prisma/loyalty.prisma-repository";
-import { BusinessErrorCodes, ResourceErrorCodes } from "@/types/error-codes";
+import { BusinessErrorCodes, ResourceErrorCodes } from "@neutra/commons";
 
 const now = new Date("2030-01-15T00:00:00.000Z");
 const startsAt = new Date("2030-01-01T00:00:00.000Z");

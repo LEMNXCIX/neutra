@@ -1,25 +1,6 @@
 /**
- * Staff Entity
- * Represents a staff member who provides services
+ * Local contract shim. The definition now lives in `@neutra/commons`; this
+ * module only re-exports it so existing `@/core/entities/*` imports keep
+ * working while the API migrates. No definitions are duplicated here.
  */
-
-export interface WorkingHours {
-    [day: string]: { start: string; end: string } | null;
-}
-
-export interface Staff {
-    id: string;
-    userId: string | null;
-    name: string;
-    email: string | null;
-    phone: string | null;
-    avatar: string | null;
-    bio: string | null;
-    active: boolean;
-    workingHours: WorkingHours | null;
-    serviceIds?: string[];
-    tenantId: string;
-    tenant?: { id: string; name: string; slug: string };
-    createdAt: Date;
-    updatedAt: Date;
-}
+export type { WorkingHours, Staff } from "@neutra/commons";

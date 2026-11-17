@@ -11,7 +11,7 @@ import type {
 import type { ICacheProvider } from "@/core/providers/cache-provider.interface";
 import type { IUserRepository } from "@/core/repositories/user.repository.interface";
 import { Success, type UseCaseResult } from "@/core/utils/use-case-result";
-import { AuthErrorCodes, TenantErrorCodes } from "@/types/error-codes";
+import { AuthErrorCodes, TenantErrorCodes } from "@neutra/commons";
 
 export class LoginUseCase {
     constructor(

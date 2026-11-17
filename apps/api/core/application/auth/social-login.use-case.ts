@@ -12,7 +12,7 @@ import type {
     UserCreateData,
 } from "@/core/repositories/user.repository.interface";
 import { Success, type UseCaseResult } from "@/core/utils/use-case-result";
-import { TenantErrorCodes } from "@/types/error-codes";
+import { TenantErrorCodes } from "@neutra/commons";
 
 export class SocialLoginUseCase {
     constructor(

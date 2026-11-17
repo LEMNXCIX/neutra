@@ -8,7 +8,7 @@ import type {
     IFeatureRepository,
 } from "@/core/repositories/feature.repository.interface";
 import { Success, type UseCaseResult } from "@/core/utils/use-case-result";
-import { ValidationErrorCodes } from "@/types/error-codes";
+import { ValidationErrorCodes } from "@neutra/commons";
 
 export class CreateFeatureUseCase {
     constructor(private featureRepository: IFeatureRepository) {}

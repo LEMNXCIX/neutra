@@ -15,7 +15,7 @@ import {
     mapCoupon,
     toCouponType,
 } from "@/infrastructure/database/prisma/coupon-mapper";
-import { BusinessErrorCodes } from "@/types/error-codes";
+import { BusinessErrorCodes } from "@neutra/commons";
 
 type CouponWhereInput = Prisma.CouponWhereInput & {
     ownerId?: Prisma.StringNullableFilter<"Coupon"> | string | null;
