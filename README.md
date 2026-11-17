@@ -28,3 +28,20 @@ lives at the root.
 
 `scripts/verify-layout.mjs` asserts the root layout and that the imported API
 history is present; run it with `node scripts/verify-layout.mjs`.
+`scripts/verify-dod.mjs` asserts the full definition-of-done gate (single
+lockfile, no `class-validator`/`class-transformer` in the API, `@neutra/commons`
+as `workspace:*`, an isomorphic commons package, the five migration SHAs, a
+clean tree and an untouched frontend); run it with `node scripts/verify-dod.mjs`.
+
+## Known degradation: frontend error-code drift guard
+
+The drift guard in
+`neutra-frontend/src/lib/__tests__/error-codes.test.ts` no longer reads
+`../api-neutra-v2/types/error-codes.ts`. After this migration the authoritative
+wire error codes live in `@neutra/commons` inside this monorepo, so that test
+keeps passing against the old sibling-repo path without ever seeing codes added
+to — or removed from — the real source. The guard is therefore **blind until
+phase 2**, when `neutra-frontend` is incorporated as `apps/web` and the test is
+repointed at `@neutra/commons`. The `neutra-frontend` repository itself was not
+modified by this migration (`scripts/.frontend-baseline.txt` is the unchanged
+baseline verified by `scripts/verify-dod.mjs`).
