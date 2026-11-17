@@ -1,0 +1,584 @@
+{
+  "query.appointment.availability": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "staffId should not be empty",
+        "field": "staffId",
+        "domain": "validation"
+      },
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "serviceId should not be empty",
+        "field": "serviceId",
+        "domain": "validation"
+      },
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "date must be a valid ISO 8601 date string",
+        "field": "date",
+        "domain": "validation"
+      }
+    ]
+  },
+  "query.appointment.list": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "startDate must be a valid ISO 8601 date string",
+        "field": "startDate",
+        "domain": "validation"
+      },
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "page must match /^[1-9]\\d*$/ regular expression",
+        "field": "page",
+        "domain": "validation"
+      },
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "limit must match /^[1-9]\\d*$/ regular expression",
+        "field": "limit",
+        "domain": "validation"
+      }
+    ]
+  },
+  "query.appointment.attention": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "page must match /^[1-9]\\d*$/ regular expression",
+        "field": "page",
+        "domain": "validation"
+      },
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "limit must match /^[1-9]\\d*$/ regular expression",
+        "field": "limit",
+        "domain": "validation"
+      }
+    ]
+  },
+  "query.category.list": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "page must match /^[1-9]\\d*$/ regular expression",
+        "field": "page",
+        "domain": "validation"
+      }
+    ]
+  },
+  "query.coupon.list": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "limit must match /^[1-9]\\d*$/ regular expression",
+        "field": "limit",
+        "domain": "validation"
+      }
+    ]
+  },
+  "query.log.list": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "skip must match /^[1-9]\\d*$/ regular expression",
+        "field": "skip",
+        "domain": "validation"
+      },
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "take must match /^[1-9]\\d*$/ regular expression",
+        "field": "take",
+        "domain": "validation"
+      },
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "startDate must be a valid ISO 8601 date string",
+        "field": "startDate",
+        "domain": "validation"
+      }
+    ]
+  },
+  "query.log.stats": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "timeframe must be a string",
+        "field": "timeframe",
+        "domain": "validation"
+      }
+    ]
+  },
+  "query.order.getOrderByUser": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "status must be a string",
+        "field": "status",
+        "domain": "validation"
+      }
+    ]
+  },
+  "query.order.stats": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "startDate must be a valid ISO 8601 date string",
+        "field": "startDate",
+        "domain": "validation"
+      },
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "endDate must be a valid ISO 8601 date string",
+        "field": "endDate",
+        "domain": "validation"
+      }
+    ]
+  },
+  "query.order.list": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "status must be a string",
+        "field": "status",
+        "domain": "validation"
+      },
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "startDate must be a valid ISO 8601 date string",
+        "field": "startDate",
+        "domain": "validation"
+      },
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "page must match /^[1-9]\\d*$/ regular expression",
+        "field": "page",
+        "domain": "validation"
+      }
+    ]
+  },
+  "query.order.all": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "limit must match /^[1-9]\\d*$/ regular expression",
+        "field": "limit",
+        "domain": "validation"
+      }
+    ]
+  },
+  "query.permission.list": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "search must be a string",
+        "field": "search",
+        "domain": "validation"
+      },
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "page must match /^[1-9]\\d*$/ regular expression",
+        "field": "page",
+        "domain": "validation"
+      }
+    ]
+  },
+  "query.role.list": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "limit must match /^[1-9]\\d*$/ regular expression",
+        "field": "limit",
+        "domain": "validation"
+      }
+    ]
+  },
+  "query.service.list": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "activeOnly must be one of the following values: true, false",
+        "field": "activeOnly",
+        "domain": "validation"
+      }
+    ]
+  },
+  "query.slide.list": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "activeOnly must be one of the following values: true, false",
+        "field": "activeOnly",
+        "domain": "validation"
+      }
+    ]
+  },
+  "query.staff.list": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "activeOnly must be one of the following values: true, false",
+        "field": "activeOnly",
+        "domain": "validation"
+      }
+    ]
+  },
+  "body.appointment": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "serviceId should not be empty",
+        "field": "serviceId",
+        "domain": "validation"
+      },
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "staffId should not be empty",
+        "field": "staffId",
+        "domain": "validation"
+      },
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "startTime must be a valid ISO 8601 date string",
+        "field": "startTime",
+        "domain": "validation"
+      }
+    ]
+  },
+  "body.auth": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "email must be an email",
+        "field": "email",
+        "domain": "validation"
+      }
+    ]
+  },
+  "body.banner": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "title should not be empty",
+        "field": "title",
+        "domain": "validation"
+      },
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "startsAt must be a valid ISO 8601 date string",
+        "field": "startsAt",
+        "domain": "validation"
+      },
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "endsAt must be a valid ISO 8601 date string",
+        "field": "endsAt",
+        "domain": "validation"
+      }
+    ]
+  },
+  "body.cart": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "productId should not be empty",
+        "field": "productId",
+        "domain": "validation"
+      },
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "amount must not be less than 1",
+        "field": "amount",
+        "domain": "validation"
+      }
+    ]
+  },
+  "body.category": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "name should not be empty",
+        "field": "name",
+        "domain": "validation"
+      }
+    ]
+  },
+  "body.coupon": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "code should not be empty",
+        "field": "code",
+        "domain": "validation"
+      },
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "type must be one of the following values: PERCENT, FIXED",
+        "field": "type",
+        "domain": "validation"
+      },
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "value must not be less than 0",
+        "field": "value",
+        "domain": "validation"
+      },
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "expiresAt must be a valid ISO 8601 date string",
+        "field": "expiresAt",
+        "domain": "validation"
+      }
+    ]
+  },
+  "body.feature": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "key must be a string",
+        "field": "key",
+        "domain": "validation"
+      },
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "name must be a string",
+        "field": "name",
+        "domain": "validation"
+      }
+    ]
+  },
+  "body.loyalty": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "type must be one of the following values: PERCENT, FIXED",
+        "field": "type",
+        "domain": "validation"
+      },
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "value must not be less than 0",
+        "field": "value",
+        "domain": "validation"
+      }
+    ]
+  },
+  "body.order": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "status must be one of the following values: PENDIENTE, PAGADO, ENVIADO, ENTREGADO",
+        "field": "status",
+        "domain": "validation"
+      }
+    ]
+  },
+  "body.permission": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "name should not be empty",
+        "field": "name",
+        "domain": "validation"
+      }
+    ]
+  },
+  "body.product": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "name must be a string",
+        "field": "name",
+        "domain": "validation"
+      },
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "description must be a string",
+        "field": "description",
+        "domain": "validation"
+      },
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "price must not be less than 0",
+        "field": "price",
+        "domain": "validation"
+      }
+    ]
+  },
+  "body.role": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "name should not be empty",
+        "field": "name",
+        "domain": "validation"
+      }
+    ]
+  },
+  "body.service": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "name should not be empty",
+        "field": "name",
+        "domain": "validation"
+      },
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "duration must not be less than 1",
+        "field": "duration",
+        "domain": "validation"
+      },
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "price must not be less than 0",
+        "field": "price",
+        "domain": "validation"
+      }
+    ]
+  },
+  "body.slide": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "title should not be empty",
+        "field": "title",
+        "domain": "validation"
+      },
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "img should not be empty",
+        "field": "img",
+        "domain": "validation"
+      }
+    ]
+  },
+  "body.staff": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "name should not be empty",
+        "field": "name",
+        "domain": "validation"
+      },
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "email must be an email",
+        "field": "email",
+        "domain": "validation"
+      }
+    ]
+  },
+  "body.tenant": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "name must be shorter than or equal to 100 characters",
+        "field": "name",
+        "domain": "validation"
+      },
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "slug must be shorter than or equal to 63 characters",
+        "field": "slug",
+        "domain": "validation"
+      },
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "type must be one of the following values: STORE, BOOKING, HYBRID",
+        "field": "type",
+        "domain": "validation"
+      }
+    ]
+  },
+  "body.user": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "roleId should not be empty",
+        "field": "roleId",
+        "domain": "validation"
+      }
+    ]
+  },
+  "body.whatsapp": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "phoneNumberId is required",
+        "field": "phoneNumberId",
+        "domain": "validation"
+      }
+    ]
+  },
+  "body.appointment-query": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "staffId should not be empty",
+        "field": "staffId",
+        "domain": "validation"
+      },
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "serviceId should not be empty",
+        "field": "serviceId",
+        "domain": "validation"
+      },
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "date must be a valid ISO 8601 date string",
+        "field": "date",
+        "domain": "validation"
+      }
+    ]
+  },
+  "body.list-query": {
+    "status": 400,
+    "errors": [
+      {
+        "code": "VALIDATION_INVALID_FORMAT",
+        "message": "activeOnly must be one of the following values: true, false",
+        "field": "activeOnly",
+        "domain": "validation"
+      }
+    ]
+  }
+}

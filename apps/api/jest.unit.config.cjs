@@ -57,5 +57,9 @@ module.exports = {
         "^redis$": "<rootDir>/test/mocks/redis.mock.ts",
         "^bullmq$": "<rootDir>/test/mocks/bullmq.mock.ts",
     },
-    transformIgnorePatterns: ["node_modules/(?!uuid/)"],
+    // Bun hoists packages under `node_modules/.bun/<pkg>/node_modules/<pkg>`,
+    // so the old `node_modules/(?!uuid/)` pattern ignored the ESM-only uuid v14
+    // at the first `node_modules/` segment and Jest tried to require() raw ESM.
+    // Allow uuid at any depth so @swc/jest can transform it.
+    transformIgnorePatterns: ["node_modules/(?!(?:.*/)?uuid/)"],
 };

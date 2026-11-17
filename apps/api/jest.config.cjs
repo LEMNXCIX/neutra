@@ -29,6 +29,18 @@ module.exports = {
                 },
             },
         ],
+        // Needed for ESM-only dependencies (uuid v14) that transformIgnorePatterns
+        // deliberately lets through; mirrors jest.unit.config.cjs.
+        "^.+\\.[cm]?js$": [
+            "@swc/jest",
+            {
+                jsc: {
+                    parser: { syntax: "ecmascript" },
+                    target: "es2020",
+                },
+                module: { type: "commonjs" },
+            },
+        ],
     },
     setupFilesAfterEnv: ["<rootDir>/test/jest.setup.ts"],
     testTimeout: 20000,
@@ -41,5 +53,7 @@ module.exports = {
         "^redis$": "<rootDir>/test/mocks/redis.mock.ts",
         "^bullmq$": "<rootDir>/test/mocks/bullmq.mock.ts",
     },
-    transformIgnorePatterns: ["node_modules/(?!(@scalar|uuid)/)"],
+    // Match the unit config: allow @swc/jest to transform ESM-only uuid v14
+    // even when Bun hoists it under node_modules/.bun/<pkg>/node_modules/uuid.
+    transformIgnorePatterns: ["node_modules/(?!(?:.*/)?(?:@scalar|uuid)/)"],
 };
