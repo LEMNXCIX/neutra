@@ -14,7 +14,8 @@
     "format:check": "turbo run format:check",
     "check:arch": "turbo run check:arch",
     "doctor:api": "bun run --cwd apps/api doctor",
-    "commons:check": "turbo run commons:check"
+    "commons:check": "turbo run commons:check",
+    "verify:production": "bun run --cwd apps/api verify:production"
   },
   "devDependencies": {
     "turbo": "^2.10.12"

@@ -10,6 +10,8 @@ export interface DoctorCliOptions {
     format: ReportFormat;
     runtimeUrl?: string;
     includeIntegration: boolean;
+    /** Optional comma-separated check ids, e.g. `architecture.rules`. */
+    rules?: string[];
     help: boolean;
 }
 
@@ -21,6 +23,7 @@ Options:
   --profile default|ci|full       Select the check profile
   --format text|json|sarif        Select the report format
   --runtime-url URL              Check live /health and /ready endpoints
+  --rules ids                    Comma-separated check ids to run (e.g. architecture.rules)
   --include-integration          Run the explicit integration profile checks
   --help                         Show this help
 `;
@@ -125,6 +128,15 @@ export function parseArgs(argv: readonly string[]): DoctorCliOptions {
                 if (inlineValue === undefined) index++;
                 break;
             }
+            case "--rules": {
+                const value = requireOptionValue(argv, index, inlineValue);
+                options.rules = value
+                    .split(",")
+                    .map((id) => id.trim())
+                    .filter(Boolean);
+                if (inlineValue === undefined) index++;
+                break;
+            }
             default:
                 throw new InvalidDoctorArgumentsError();
         }
@@ -177,10 +189,20 @@ export async function main(
     }
 
     try {
-        const report = await runDoctor(
-            createCheckRegistry(),
-            buildDoctorContext(options),
+        const registry = createCheckRegistry();
+        const unknown = (options.rules ?? []).filter(
+            (id) => !registry.some((check) => check.id === id),
         );
+        if (unknown.length > 0) {
+            process.stderr.write(
+                `Unknown doctor check(s): ${unknown.join(", ")}\n`,
+            );
+            return 2;
+        }
+        const checks = options.rules
+            ? registry.filter((check) => options.rules?.includes(check.id))
+            : registry;
+        const report = await runDoctor(checks, buildDoctorContext(options));
         process.stdout.write(renderReport(report, options.format));
         return report.exitCode;
     } catch {

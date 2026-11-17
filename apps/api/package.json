@@ -21,6 +21,7 @@
     "dev:watch": "cross-env NODE_ENV=development nodemon --watch \"./**/*.ts\" --exec \"tsx ./app.ts\"",
     "postinstall": "DATABASE_URL=\"${DATABASE_URL:-postgresql://your_db_user:your_db_password@localhost:5432/neutra_db?schema=public}\" prisma generate --config prisma.config.ts",
     "check:arch": "node scripts/check-architecture.ts",
+    "commons:check": "node scripts/check-commons-align.mjs",
     "lint:arch": "node scripts/check-architecture.ts",
     "lint": "biome check",
     "lint:fix": "biome check --write",

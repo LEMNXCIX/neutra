@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join, posix, relative } from "node:path";
+import { join, posix, relative, resolve } from "node:path";
 import type {
     CheckRunResult,
     DoctorCheck,
@@ -57,9 +57,26 @@ interface SourceFile {
 
 type Violation = string;
 
+/**
+ * Absolute path to apps/api, derived from this script's location
+ * (`apps/api/scripts/api-doctor/adapters/`). The rule prefixes below (`core/`,
+ * `infrastructure/`, `middleware/`) are relative to this root: they must keep
+ * resolving against the API, never against the new monorepo root.
+ */
+const APP_API_ROOT = resolve(__dirname, "../../..");
+
 interface Rule {
     id: string;
+    /** Stable name reported by the doctor so R1–R11 are visible in CI logs. */
+    name: string;
     run: (rootDir: string, files: readonly SourceFile[]) => Violation[];
+}
+
+function guardRoot(context: DoctorContext): string {
+    // The doctor CLI resolves context.rootDir from its own entry point, which
+    // is apps/api. Embedded callers (the architecture-rules tests) inject a
+    // sandbox root, so honour it; the script-relative anchor is the fallback.
+    return context.rootDir || APP_API_ROOT;
 }
 
 function toPosix(value: string): string {
@@ -183,6 +200,7 @@ function forbiddenModule(specifier: string): string | null {
 /** R1: core/ must not import outer layers, frameworks, or Prisma. */
 const layerDirection: Rule = {
     id: "R1",
+    name: "layerDirection",
     run: (_rootDir, files) => {
         const violations: Violation[] = [];
         for (const file of files) {
@@ -221,6 +239,7 @@ const ENTITY_DECLARATIONS: ReadonlyArray<[string, RegExp]> = [
 /** R2: entities carry types only, never behaviour. */
 const entitiesAreTypes: Rule = {
     id: "R2",
+    name: "entitiesAreTypes",
     run: (_rootDir, files) => {
         const violations: Violation[] = [];
         for (const file of files) {
@@ -243,6 +262,7 @@ const entitiesAreTypes: Rule = {
 /** R3: the domain layer must exist and hold real policies. */
 const domainExists: Rule = {
     id: "R3",
+    name: "domainExists",
     run: (rootDir, files) => {
         const violations: Violation[] = [];
         if (!existsSync(join(rootDir, "core/domain"))) {
@@ -316,6 +336,7 @@ function readCallArguments(text: string, openIndex: number): string {
 /** R4: a business rule code may not be implemented in two layers. */
 const noDuplicatedRules: Rule = {
     id: "R4",
+    name: "noDuplicatedRules",
     run: (_rootDir, files) => {
         const sites = new Map<string, { core: string[]; outer: string[] }>();
         for (const file of files) {
@@ -357,6 +378,7 @@ const noDuplicatedRules: Rule = {
 /** R5: the presenter layer is dead and must stay deleted. */
 const noPresenters: Rule = {
     id: "R5",
+    name: "noPresenters",
     run: (rootDir, files) => {
         if (!existsSync(join(rootDir, "core/presenters"))) return [];
         const count = files.filter((file) =>
@@ -369,6 +391,7 @@ const noPresenters: Rule = {
 /** R6: money fields are never hardcoded to zero. */
 const noHardcodedMoney: Rule = {
     id: "R6",
+    name: "noHardcodedMoney",
     run: (_rootDir, files) => {
         const violations: Violation[] = [];
         for (const file of files) {
@@ -393,6 +416,7 @@ const noHardcodedMoney: Rule = {
 /** R7: CommonJS require defeats static resolution, so core/ bans it outright. */
 const noRequireInCore: Rule = {
     id: "R7",
+    name: "noRequireInCore",
     run: (_rootDir, files) => {
         const violations: Violation[] = [];
         for (const file of files) {
@@ -416,6 +440,7 @@ const noRequireInCore: Rule = {
  */
 const noHttpStatusInCore: Rule = {
     id: "R8",
+    name: "noHttpStatusInCore",
     run: (_rootDir, files) => {
         const violations: Violation[] = [];
         for (const file of files) {
@@ -440,6 +465,7 @@ const noHttpStatusInCore: Rule = {
 /** R9: persistence ports depend on domain types, never on HTTP request DTOs. */
 const portsIgnoreHttpDtos: Rule = {
     id: "R9",
+    name: "portsIgnoreHttpDtos",
     run: (_rootDir, files) => {
         const violations: Violation[] = [];
         for (const file of files) {
@@ -507,6 +533,7 @@ function concreteWiringViolations(
 /** R10: auth middleware only extracts a token and delegates to the use case. */
 const authMiddlewareIsThin: Rule = {
     id: "R10",
+    name: "authMiddlewareIsThin",
     run: (_rootDir, files) =>
         concreteWiringViolations(
             files,
@@ -522,6 +549,7 @@ const authMiddlewareIsThin: Rule = {
 /** R11: tenant/feature middleware receives its repository and cache by factory. */
 const tenantMiddlewareIsThin: Rule = {
     id: "R11",
+    name: "tenantMiddlewareIsThin",
     run: (_rootDir, files) =>
         concreteWiringViolations(
             files,
@@ -546,12 +574,13 @@ const RULES: readonly Rule[] = [
 ];
 
 export function runArchitectureRules(context: DoctorContext): CheckRunResult {
-    const files = collectSourceFiles(context.rootDir);
+    const rootDir = guardRoot(context);
+    const files = collectSourceFiles(rootDir);
     const details: string[] = [];
     const counts: string[] = [];
 
     for (const rule of RULES) {
-        const violations = rule.run(context.rootDir, files);
+        const violations = rule.run(rootDir, files);
         if (violations.length === 0) continue;
         counts.push(`${rule.id} ${violations.length}`);
         for (const violation of violations) {
@@ -562,7 +591,9 @@ export function runArchitectureRules(context: DoctorContext): CheckRunResult {
     if (details.length === 0) {
         return {
             status: "PASS",
-            message: `${RULES.length} architecture rules passed across ${files.length} TypeScript files`,
+            message: `${RULES.length} architecture rules passed (${RULES.map(
+                (rule) => rule.name,
+            ).join(", ")}) across ${files.length} TypeScript files`,
         };
     }
     return {
