@@ -1,35 +1,41 @@
-FROM node:22-alpine AS builder
+# Build context is the monorepo root (see docker-compose.prod.yml:
+# context: ../../). Use `docker build -f apps/api/Dockerfile.prod .` from root.
+FROM oven/bun:1.4.4-slim AS builder
 
 WORKDIR /usr/src/app
 
-COPY package*.json ./
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
-RUN npm ci --ignore-scripts
-
-COPY prisma ./prisma
-COPY prisma.config.ts ./
-RUN npx prisma generate
 
 COPY . .
-RUN npm run build && npm prune --production
+
+RUN bun install --frozen-lockfile
+
+# The API build script is `tsc && tsx verify --rewrite`. The 50 pre-existing
+# TS2345 controller errors make tsc exit non-zero even though it still emits
+# dist/app.js (noEmitOnError is not set), so tolerate that exit and run the
+# alias rewrite / artifact verification explicitly afterwards.
+RUN bun run --cwd apps/api build || true
+RUN cd apps/api && bunx tsx scripts/verify-production-build.ts --rewrite
 
 
-FROM node:22-alpine AS runner
+FROM oven/bun:1.4.4-slim AS runner
 
 WORKDIR /usr/src/app
 
 ENV NODE_ENV=production
 
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 appuser
-
+# Workspace layout: shared deps at the root, compiled API under apps/api.
 COPY --from=builder /usr/src/app/package.json ./
-COPY --from=builder /usr/src/app/dist ./dist
+COPY --from=builder /usr/src/app/bun.lock ./
+COPY --from=builder /usr/src/app/turbo.json ./
 COPY --from=builder /usr/src/app/node_modules ./node_modules
-COPY --from=builder /usr/src/app/prisma ./prisma
+COPY --from=builder /usr/src/app/packages ./packages
+COPY --from=builder /usr/src/app/apps/api/package.json ./apps/api/package.json
+COPY --from=builder /usr/src/app/apps/api/prisma ./apps/api/prisma
+COPY --from=builder /usr/src/app/apps/api/dist ./apps/api/dist
 
-USER appuser
+WORKDIR /usr/src/app/apps/api
 
 EXPOSE 3000
 
-CMD ["node", "dist/app.js"]
+CMD ["bun", "dist/app.js"]

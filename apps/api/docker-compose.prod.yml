@@ -1,8 +1,10 @@
 services:
   app:
     build:
-      context: .
-      dockerfile: Dockerfile.prod
+      # Monorepo root is the build context; the API Dockerfile lives under
+      # apps/api. Run with: docker compose -f apps/api/docker-compose.prod.yml up
+      context: ../../
+      dockerfile: apps/api/Dockerfile.prod
     environment:
       - NODE_ENV=production
       - PORT=${PORT:-3000}
@@ -22,6 +24,16 @@ services:
       redis:
         condition: service_healthy
     restart: always
+
+  # cms:  # Task 11: uncomment once apps/cms/Dockerfile lands.
+  #   build:
+  #     context: ../../
+  #     dockerfile: apps/cms/Dockerfile
+  #   environment:
+  #     - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
 
   db:
     image: postgres:16-alpine

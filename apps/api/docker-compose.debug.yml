@@ -4,13 +4,15 @@ services:
   ecommerce:
     image: ecommerce
     build:
-      context: .
-      dockerfile: ./Dockerfile.dev
+      # Monorepo root is the build context; the API Dockerfile lives under
+      # apps/api. Run with: docker compose -f apps/api/docker-compose.debug.yml up
+      context: ../../
+      dockerfile: apps/api/Dockerfile.dev
     env_file:
-     - ./.env
+      - ./.env
     environment:
       NODE_ENV: development
     ports:
       - 3000:3000
       - 9229:9229
-    command: ["node", "--inspect=0.0.0.0:9229", "index.js"]
+    command: ["bun", "--inspect=0.0.0.0:9229", "run", "--cwd", "apps/api", "dev"]
