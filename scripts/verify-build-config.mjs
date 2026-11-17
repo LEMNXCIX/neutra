@@ -32,7 +32,15 @@ assert(existsSync(join(root, ciPath)), `missing ${ciPath} (workflow must live at
 const ci = read(ciPath);
 assert(ci.includes("bun install --frozen-lockfile"), `${ciPath} must contain 'bun install --frozen-lockfile'`);
 assert(ci.includes("setup-bun"), `${ciPath} must contain setup-bun`);
-assert(ci.includes("cache: bun"), `${ciPath} must contain 'cache: bun'`);
+// setup-node only accepts cache: npm|yarn|pnpm -- 'cache: bun' is invalid.
+// The Bun store must be cached explicitly with actions/cache instead (model
+// repo pattern), keyed on the single root bun.lock.
+assert(!ci.includes("cache: bun"), `${ciPath} must not contain the invalid 'cache: bun' setup-node input`);
+assert(ci.includes("path: ~/.bun/install/cache"), `${ciPath} must cache the Bun store (path: ~/.bun/install/cache)`);
+assert(
+  ci.includes("key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}"),
+  `${ciPath} must key the Bun store cache on bun.lock`,
+);
 assert(!ci.includes("npm ci"), `${ciPath} must not contain 'npm ci'`);
 assert(!/\bnpm run\b/.test(ci), `${ciPath} must not contain 'npm run'`);
 
@@ -120,7 +128,7 @@ const rewrite = spawnSync(
 assert(rewrite.status === 0, `alias rewrite / production verification failed:\n${rewrite.stdout}${rewrite.stderr}`);
 
 console.log("PASS: build config verification succeeded");
-console.log("  - CI workflow at root is bun-based (frozen lockfile, setup-bun, cache: bun, no npm ci)");
+console.log("  - CI workflow at root is bun-based (frozen lockfile, setup-bun, Bun store cached via actions/cache, no npm ci / cache: bun)");
 console.log("  - Prisma/guards run through workspace/turbo scripts; .jest-cache kept");
 console.log("  - single bun.lock; Docker contexts parametrized to apps/api; cms slot documented");
 console.log("  - bun run build emitted apps/api/dist/app.js (aliases rewritten, artifact verified)");
