@@ -1,6 +1,7 @@
-// Wire enum owned by @neutra/commons.
+// Wire enum + validation result owned by @neutra/commons.
 import { CouponType } from "@neutra/commons";
 export { CouponType };
+export type { CouponValidationResult } from "@neutra/commons";
 
 // The Coupon entity below is a front-only projection: the UI reads `tenant`
 // and `tenantId`, which the shared wire contract does not carry.
@@ -68,12 +69,3 @@ export interface ValidateCouponDTO {
     serviceIds?: string[];
 }
 
-// Front-only result shape: its `coupon` is the front `Coupon` above, while
-// commons' `CouponValidationResult` carries the API response shape
-// (`description: string | null`), which is not assignable to it.
-export interface CouponValidationResult {
-    valid: boolean;
-    coupon?: Coupon;
-    discountAmount?: number;
-    message?: string;
-}

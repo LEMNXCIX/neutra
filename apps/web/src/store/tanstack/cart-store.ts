@@ -4,7 +4,7 @@ import { reportError } from "@/lib/error-reporting";
 import { cartService } from "@/services/cart.service";
 import { couponsService } from "@/services/coupons.service";
 import { productsService } from "@/services/products.service";
-import { type Coupon, CouponType } from "@/types/coupon.types";
+import { CouponType, type CouponValidationResult } from "@/types/coupon.types";
 import type { Product } from "@/types/product.types";
 import { authStore } from "./auth-store";
 import { tenantStore } from "./tenant-store";
@@ -100,7 +100,7 @@ function normalizeDiscount(
 }
 
 function toContextCoupon(
-    coupon: Coupon,
+    coupon: NonNullable<CouponValidationResult["coupon"]>,
     previous?: ContextCoupon,
 ): NonNullable<ContextCoupon> {
     const isReward = coupon.isReward ?? previous?.isReward;
