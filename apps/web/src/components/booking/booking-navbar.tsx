@@ -1,0 +1,410 @@
+"use client";
+import { Link } from "@tanstack/react-router";
+import { ArrowRight, Calendar, Menu, User } from "lucide-react";
+import { useState } from "react";
+import Logo from "@/components/logo";
+import { UserAccountSummary } from "@/components/shared/UserAccountSummary";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+    NavigationMenu,
+    NavigationMenuItem,
+    NavigationMenuLink,
+    NavigationMenuList,
+} from "@/components/ui/navigation-menu";
+import { navigationMenuTriggerStyle } from "@/components/ui/navigation-menu-trigger-style";
+import {
+    Sheet,
+    SheetContent,
+    SheetHeader,
+    SheetTitle,
+    SheetTrigger,
+} from "@/components/ui/sheet";
+import { useRouter } from "@/lib/navigation";
+import { cn } from "@/lib/utils";
+import { useTheme } from "@/providers/theme-provider";
+import { useAuthStore } from "@/store/auth-store";
+
+type NavItem = { label: string; href: string };
+
+type MobileMenuSheetProps = {
+    isOpen: boolean;
+    setIsOpen: (open: boolean) => void;
+    navItems: NavItem[];
+    tenantName?: string | null;
+    tenantLogo?: string;
+    user: {
+        name: string;
+        email?: string;
+        avatar?: string;
+        isAdmin: boolean;
+    } | null;
+    logout: () => Promise<void>;
+    router: ReturnType<typeof useRouter>;
+};
+
+function MobileMenuSheet({
+    isOpen,
+    setIsOpen,
+    navItems,
+    tenantName,
+    tenantLogo,
+    user,
+    logout,
+    router,
+}: MobileMenuSheetProps) {
+    return (
+        <Sheet open={isOpen} onOpenChange={setIsOpen}>
+            <SheetTrigger asChild>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Abrir menú de navegación"
+                    className="size-10 hover:bg-foreground hover:text-background transition-[color,background-color,border-color,box-shadow,opacity,transform]"
+                >
+                    <Menu className="stroke-[3px]" />
+                </Button>
+            </SheetTrigger>
+            <SheetContent
+                side="right"
+                className="w-full sm:w-[380px] p-0 flex flex-col border-l border-border bg-background rounded-l-3xl"
+            >
+                <SheetHeader className="p-8 border-b border-border text-left bg-muted/20">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 bg-background border border-border shadow-sm rounded-xl">
+                            <Logo size={32} src={tenantLogo} />
+                        </div>
+                        <div>
+                            <SheetTitle className="text-2xl font-bold tracking-tight">
+                                {tenantName || "XCIX"}
+                            </SheetTitle>
+                            {!tenantName && (
+                                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mt-0.5">
+                                    Módulo de reservas
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </SheetHeader>
+
+                <div className="flex-1 overflow-y-auto p-8 space-y-10">
+                    <nav className="flex flex-col gap-3">
+                        <span className="text-[10px] font-bold text-primary uppercase tracking-widest px-1">
+                            Navegación
+                        </span>
+                        <div className="grid gap-2">
+                            {navItems.map((item) => (
+                                <Link
+                                    key={item.href}
+                                    to={item.href}
+                                    onClick={() => setIsOpen(false)}
+                                    className="flex items-center justify-between p-4 bg-card border border-border shadow-sm hover:shadow-md hover:border-primary/20 transition-[color,background-color,border-color,box-shadow,opacity,transform] rounded-xl group"
+                                >
+                                    <span className="font-bold text-lg">
+                                        {item.label}
+                                    </span>
+                                    <ArrowRight
+                                        size={20}
+                                        className="text-muted-foreground group-hover:text-primary transition-colors"
+                                    />
+                                </Link>
+                            ))}
+                        </div>
+                    </nav>
+
+                    <div className="space-y-6 pt-10 border-t border-border">
+                        <span className="text-[10px] font-bold text-primary uppercase tracking-widest px-1">
+                            Cuenta
+                        </span>
+                        {user ? (
+                            <div className="space-y-6">
+                                <UserAccountSummary user={user} />
+
+                                <div className="grid gap-3">
+                                    <Button
+                                        variant="outline"
+                                        className="w-full justify-between h-14 rounded-xl px-6 font-bold text-sm"
+                                        onClick={() => {
+                                            setIsOpen(false);
+                                            router.push("/appointments");
+                                        }}
+                                    >
+                                        <span>Mis citas</span>
+                                        <Calendar
+                                            size={18}
+                                            className="opacity-60"
+                                        />
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        className="w-full justify-between h-14 rounded-xl px-6 font-bold text-sm"
+                                        onClick={() => {
+                                            setIsOpen(false);
+                                            router.push("/profile");
+                                        }}
+                                    >
+                                        <span>Panel personal</span>
+                                        <User
+                                            size={18}
+                                            className="opacity-60"
+                                        />
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        className="w-full h-14 rounded-xl font-bold text-sm text-rose-600 hover:bg-rose-500/10 mt-2"
+                                        onClick={async () => {
+                                            await logout();
+                                            setIsOpen(false);
+                                            router.push("/");
+                                        }}
+                                    >
+                                        Cerrar sesión
+                                    </Button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="grid gap-3 pt-2">
+                                <Button
+                                    className="h-14 rounded-xl font-bold shadow-lg shadow-primary/20"
+                                    onClick={() => {
+                                        setIsOpen(false);
+                                        router.push("/login");
+                                    }}
+                                >
+                                    Iniciar sesión
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    className="h-14 rounded-xl font-bold border-border shadow-sm"
+                                    onClick={() => {
+                                        setIsOpen(false);
+                                        router.push("/book");
+                                    }}
+                                >
+                                    Explorar servicios
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="p-8 border-t border-border bg-muted/20 mt-auto">
+                    <p className="text-[10px] text-muted-foreground text-center font-semibold uppercase tracking-widest leading-relaxed">
+                        &copy; 2026 XCIX Platforms.
+                        <br />
+                        Todos los derechos reservados.
+                    </p>
+                </div>
+            </SheetContent>
+        </Sheet>
+    );
+}
+
+export function BookingNavbar({
+    tenantName,
+    tenantLogo,
+}: {
+    tenantName?: string | null;
+    tenantLogo?: string;
+}) {
+    const [isOpen, setIsOpen] = useState(false);
+    const { theme, setTheme } = useTheme();
+    const router = useRouter();
+    const user = useAuthStore((state) => state.user);
+    const logout = useAuthStore((state) => state.logout);
+
+    const handleThemeToggle = () => {
+        setTheme(theme === "dark" ? "light" : "dark");
+    };
+
+    const navItems = [
+        { label: "Servicios", href: "/services" },
+        { label: "Reservar Ahora", href: "/book" },
+    ];
+
+    if (user) {
+        navItems.push({ label: "Mis citas", href: "/appointments" });
+        if (user.isAdmin) {
+            navItems.push({ label: "Administración", href: "/admin" });
+        }
+    }
+
+    return (
+        <NavigationMenu
+            viewport={false}
+            className="fixed inset-x-0 top-0 z-50 w-full border-b-2 border-border bg-background/95 backdrop-blur h-16"
+        >
+            <div className="max-w-7xl mx-auto w-full flex h-full items-center justify-between px-6">
+                {/* Logo */}
+                <div className="flex items-center gap-10">
+                    <div className="flex items-center gap-0">
+                        <div
+                            className="cursor-pointer text-foreground hover-scale group"
+                            onDoubleClick={handleThemeToggle}
+                        >
+                            <div className="relative">
+                                <div className="absolute inset-0 bg-primary/20 rounded-full blur-lg opacity-0 group-hover:opacity-100 transition-opacity" />
+                                <Logo
+                                    size={36}
+                                    className="relative z-10"
+                                    src={tenantLogo}
+                                />
+                            </div>
+                        </div>
+                        <Link
+                            to="/"
+                            className="ml-3 flex flex-col leading-tight"
+                        >
+                            <span className="text-lg font-bold tracking-tight">
+                                {tenantName || "XCIX"}
+                            </span>
+                            {!tenantName && (
+                                <span className="text-[9px] font-medium text-muted-foreground uppercase tracking-widest">
+                                    Módulo de reservas
+                                </span>
+                            )}
+                        </Link>
+                    </div>
+
+                    {/* Desktop Navigation */}
+                    <div className="hidden lg:flex items-center gap-1">
+                        <NavigationMenuList className="flex gap-1">
+                            {navItems.map((item) => (
+                                <NavigationMenuItem
+                                    key={item.href}
+                                    className="list-none"
+                                >
+                                    <NavigationMenuLink
+                                        asChild
+                                        className={cn(
+                                            navigationMenuTriggerStyle(),
+                                            "bg-transparent font-semibold text-xs tracking-tight hover:bg-muted transition-colors rounded-lg px-4",
+                                        )}
+                                    >
+                                        <Link to={item.href}>{item.label}</Link>
+                                    </NavigationMenuLink>
+                                </NavigationMenuItem>
+                            ))}
+                        </NavigationMenuList>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-4">
+                    {/* Auth Section */}
+                    <div className="hidden lg:flex items-center gap-4">
+                        {user ? (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger className="ml-2 outline-none">
+                                    <Avatar className="size-9 border border-border hover:border-primary/50 transition-[color,background-color,border-color,box-shadow,opacity,transform] cursor-pointer shadow-sm">
+                                        <AvatarImage
+                                            src={user.avatar}
+                                            alt={user.name}
+                                        />
+                                        <AvatarFallback className="font-bold text-xs bg-primary/10 text-primary">
+                                            {user.name
+                                                .slice(0, 2)
+                                                .toUpperCase()}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                    className="w-64 p-2 border border-border shadow-2xl rounded-xl mt-2"
+                                    align="end"
+                                >
+                                    <DropdownMenuLabel className="p-4 mb-1">
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-1">
+                                            Perfil de identidad
+                                        </p>
+                                        <p className="font-bold text-sm">
+                                            {user.name}
+                                        </p>
+                                    </DropdownMenuLabel>
+                                    <DropdownMenuItem
+                                        className="p-3 rounded-xl cursor-pointer focus:bg-muted"
+                                        asChild
+                                    >
+                                        <Link
+                                            to="/appointments"
+                                            className="flex items-center gap-3 font-semibold text-sm w-full"
+                                        >
+                                            <Calendar
+                                                size={16}
+                                                className="opacity-70"
+                                            />{" "}
+                                            Citas
+                                        </Link>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        className="p-3 rounded-xl cursor-pointer focus:bg-muted"
+                                        asChild
+                                    >
+                                        <Link
+                                            to="/profile"
+                                            className="flex items-center gap-3 font-semibold text-sm w-full"
+                                        >
+                                            <User
+                                                size={16}
+                                                className="opacity-70"
+                                            />{" "}
+                                            Mi perfil
+                                        </Link>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator className="mx-2 bg-border/50" />
+                                    <DropdownMenuItem
+                                        className="p-3 rounded-xl cursor-pointer focus:bg-rose-500/10 text-rose-600"
+                                        onClick={async () => {
+                                            await logout();
+                                            router.push("/");
+                                        }}
+                                    >
+                                        <span className="font-bold text-sm">
+                                            Cerrar sesión
+                                        </span>
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        ) : (
+                            <div className="flex items-center gap-4">
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => router.push("/login")}
+                                    className="font-semibold text-xs"
+                                >
+                                    Iniciar sesión
+                                </Button>
+                                <Button
+                                    onClick={() => router.push("/book")}
+                                    className="rounded-full px-6 font-bold text-xs shadow-md shadow-primary/20 h-10"
+                                >
+                                    Reservar sesión
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Mobile Menu Toggle */}
+                    <div className="flex lg:hidden">
+                        <MobileMenuSheet
+                            isOpen={isOpen}
+                            setIsOpen={setIsOpen}
+                            navItems={navItems}
+                            tenantName={tenantName}
+                            tenantLogo={tenantLogo}
+                            user={user}
+                            logout={logout}
+                            router={router}
+                        />
+                    </div>
+                </div>
+            </div>
+        </NavigationMenu>
+    );
+}

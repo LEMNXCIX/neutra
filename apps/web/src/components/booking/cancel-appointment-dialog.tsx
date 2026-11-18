@@ -1,0 +1,98 @@
+import { Loader2 } from "lucide-react";
+import type React from "react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { reportError } from "@/lib/error-reporting";
+import { bookingService } from "@/services/booking.service";
+
+interface CancelAppointmentDialogProps {
+    appointmentId: string;
+    onAppointmentCancelled?: () => void;
+    trigger?: React.ReactNode;
+}
+
+export function CancelAppointmentDialog({
+    appointmentId,
+    onAppointmentCancelled,
+    trigger,
+}: CancelAppointmentDialogProps) {
+    const [open, setOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [reason, setReason] = useState("");
+
+    const handleCancel = async () => {
+        try {
+            setLoading(true);
+            await bookingService.cancelAppointment(
+                appointmentId,
+                reason || undefined,
+            );
+            toast.success("Cita cancelada correctamente");
+            setOpen(false);
+            if (onAppointmentCancelled) {
+                onAppointmentCancelled();
+            }
+        } catch (err: any) {
+            reportError(err, "No pudimos cancelar la cita.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                {trigger || (
+                    <Button variant="destructive">Cancelar cita</Button>
+                )}
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Cancelar cita</DialogTitle>
+                    <DialogDescription>
+                        ¿Seguro que quieres cancelar esta cita? Esta acción no
+                        se puede deshacer.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                    <Textarea
+                        placeholder="Motivo de la cancelación (opcional)"
+                        value={reason}
+                        onChange={(e) => setReason(e.target.value)}
+                        className="resize-none"
+                    />
+                </div>
+                <DialogFooter>
+                    <Button
+                        variant="outline"
+                        onClick={() => setOpen(false)}
+                        disabled={loading}
+                    >
+                        Mantener cita
+                    </Button>
+                    <Button
+                        variant="destructive"
+                        onClick={handleCancel}
+                        disabled={loading}
+                    >
+                        {loading && (
+                            <Loader2 className="mr-2 size-4 animate-spin" />
+                        )}
+                        Confirmar cancelación
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}

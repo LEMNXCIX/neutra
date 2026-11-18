@@ -1,0 +1,307 @@
+"use client";
+
+import {
+    Activity,
+    AlertCircle,
+    Database,
+    RefreshCcw,
+    TrendingUp,
+    Zap,
+} from "lucide-react";
+import React, { use, useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import { logService } from "@/services/log.service";
+
+interface AnalyticsStats {
+    totalRequests: number;
+    errorCount: number;
+    errorRate: number;
+    statusDistribution: { status: number; count: number }[];
+    levelDistribution: { level: string; count: number }[];
+    performance: {
+        avgDuration: number;
+        maxDuration: number;
+    };
+    topFailedEndpoints: { url: string; method: string; count: number }[];
+    dailyTrend: { date: string; total: number; errors: number }[];
+}
+
+let statsCache: Record<string, AnalyticsStats> = {};
+
+function fetchStats(timeframe: string): Promise<AnalyticsStats> {
+    if (statsCache[timeframe]) {
+        return Promise.resolve(statsCache[timeframe]);
+    }
+    return logService.getStats(timeframe).then((response) => {
+        statsCache = { [timeframe]: response };
+        return response;
+    });
+}
+
+function LogAnalyticsStats({
+    statsPromise,
+}: {
+    timeframe: string;
+    statsPromise: Promise<AnalyticsStats>;
+}) {
+    const stats = use(statsPromise);
+
+    return (
+        <div className="space-y-12">
+            <div className="flex justify-between items-center border-b border-border pb-4">
+                <h3 className="font-bold uppercase tracking-widest text-xs flex items-center gap-2">
+                    <TrendingUp size={16} className="text-primary" /> Salud
+                    operativa
+                </h3>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <MetricCard
+                    label="Tasa de Error"
+                    value={`${stats.errorRate.toFixed(2)}%`}
+                    subtext={`${stats.errorCount} total failures`}
+                    isAlert={stats.errorRate > 5}
+                />
+                <MetricCard
+                    label="Latencia Media"
+                    value={`${stats.performance.avgDuration.toFixed(0)}ms`}
+                    subtext={`Max reached: ${stats.performance.maxDuration}ms`}
+                />
+                <MetricCard
+                    label="Rendimiento"
+                    value={stats.totalRequests.toLocaleString("es-ES")}
+                    subtext="Eventos procesados en total"
+                />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <div className="space-y-6">
+                    <h4 className="font-bold uppercase tracking-widest text-xs flex items-center gap-2 text-muted-foreground">
+                        <Activity size={14} /> Request Trend vs Errors
+                    </h4>
+                    <Card className="t-card p-8 space-y-8 border-none shadow-xl">
+                        {stats.dailyTrend.map((day) => {
+                            const maxVal = Math.max(
+                                ...stats.dailyTrend.map((d) => d.total),
+                                1,
+                            );
+                            const barWidth = (day.total / maxVal) * 100;
+
+                            return (
+                                <div key={day.date} className="space-y-2">
+                                    <div className="flex justify-between text-[10px] font-bold uppercase tracking-tight text-muted-foreground">
+                                        <span>
+                                            {new Date(
+                                                day.date,
+                                            ).toLocaleDateString("es-ES", {
+                                                timeZone: "UTC",
+                                            })}
+                                        </span>
+                                        <span className="text-foreground">
+                                            {day.total} REQS /{" "}
+                                            <span className="text-rose-500">
+                                                {day.errors} ERR
+                                            </span>
+                                        </span>
+                                    </div>
+                                    <div className="h-4 w-full bg-muted rounded-full relative overflow-hidden">
+                                        <div
+                                            className="h-full bg-primary/40 rounded-full transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-1000"
+                                            style={{ width: `${barWidth}%` }}
+                                        />
+                                        <div
+                                            className="absolute top-0 left-0 h-full bg-rose-500 transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-1000"
+                                            style={{
+                                                width: `${(day.errors / maxVal) * 100}%`,
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </Card>
+                </div>
+
+                <div className="space-y-6">
+                    <h4 className="font-bold uppercase tracking-widest text-xs flex items-center gap-2 text-muted-foreground">
+                        <AlertCircle size={14} /> Puntos críticos de falla
+                    </h4>
+                    <div className="t-card overflow-hidden divide-y divide-border/50 border-none shadow-xl">
+                        {stats.topFailedEndpoints.length === 0 ? (
+                            <div className="p-12 text-center text-muted-foreground font-medium text-sm italic">
+                                Sistema estable / No se detectaron errores
+                            </div>
+                        ) : (
+                            stats.topFailedEndpoints.map((endpoint) => (
+                                <div
+                                    key={`${endpoint.method}-${endpoint.url}`}
+                                    className="p-4 flex justify-between items-center hover:bg-muted/30 transition-colors"
+                                >
+                                    <div className="space-y-1">
+                                        <div className="flex items-center gap-2">
+                                            <Badge
+                                                variant="outline"
+                                                className="rounded-md font-mono text-[9px] bg-muted/50 border-border/50"
+                                            >
+                                                {endpoint.method}
+                                            </Badge>
+                                            <span className="font-mono text-[10px] font-medium text-foreground truncate max-w-[200px] sm:max-w-[300px]">
+                                                {endpoint.url}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="text-xl font-bold tracking-tight text-rose-600">
+                                            {endpoint.count}
+                                        </span>
+                                        <p className="text-[9px] font-bold uppercase text-muted-foreground">
+                                            Failures
+                                        </p>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+
+                    <div className="mt-8">
+                        <h4 className="font-bold uppercase tracking-widest text-xs flex items-center gap-2 mb-4 text-muted-foreground">
+                            <Database size={14} /> HTTP Distribution
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                            {stats.statusDistribution.map((s) => (
+                                <div
+                                    key={s.status}
+                                    className="bg-muted/50 border border-border/50 rounded-xl px-4 py-3 flex flex-col items-center min-w-[90px] shadow-sm"
+                                >
+                                    <span
+                                        className={`text-lg font-bold tracking-tight ${s.status >= 500 ? "text-rose-600" : "text-primary"}`}
+                                    >
+                                        {s.status}
+                                    </span>
+                                    <span className="text-[10px] font-bold text-muted-foreground">
+                                        {s.count} events
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+export default function LogAnalyticsDashboard() {
+    const [timeframe, setTimeframe] = useState("last_7_days");
+    const [statsPromise, setStatsPromise] = useState(() =>
+        fetchStats("last_7_days"),
+    );
+
+    const handleTimeframeChange = (tf: string) => {
+        setTimeframe(tf);
+        setStatsPromise(fetchStats(tf));
+    };
+
+    const handleRefresh = () => {
+        statsCache = {};
+        setStatsPromise(fetchStats(timeframe));
+    };
+
+    return (
+        <div className="space-y-12">
+            <div className="flex justify-between items-center border-b border-border pb-4">
+                <h3 className="font-bold uppercase tracking-widest text-xs flex items-center gap-2">
+                    <TrendingUp size={16} className="text-primary" /> Salud
+                    operativa
+                </h3>
+                <div className="flex gap-4">
+                    <select
+                        aria-label="Período de análisis"
+                        className="bg-background border border-border rounded-lg px-4 py-1.5 font-semibold text-[10px] outline-none focus:border-primary transition-[color,background-color,border-color,box-shadow,opacity,transform] shadow-sm"
+                        value={timeframe}
+                        onChange={(e) => handleTimeframeChange(e.target.value)}
+                    >
+                        <option value="last_24h">Últimas 24 horas</option>
+                        <option value="last_7_days">Últimos 7 días</option>
+                    </select>
+                    <button
+                        type="button"
+                        aria-label="Actualizar métricas"
+                        onClick={handleRefresh}
+                        className="hover:rotate-180 transition-transform duration-500 p-1.5 bg-muted rounded-lg text-muted-foreground hover:text-foreground"
+                    >
+                        <RefreshCcw size={16} />
+                    </button>
+                </div>
+            </div>
+
+            <React.Suspense
+                fallback={
+                    <div className="h-64 flex items-center justify-center border border-border border-dashed rounded-xl animate-pulse bg-muted/30">
+                        <span className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
+                            Calculating Metrics…
+                        </span>
+                    </div>
+                }
+            >
+                <LogAnalyticsStats
+                    timeframe={timeframe}
+                    statsPromise={statsPromise}
+                />
+            </React.Suspense>
+        </div>
+    );
+}
+
+function MetricCard({
+    label,
+    value,
+    subtext,
+    isAlert = false,
+}: {
+    label: string;
+    value: string;
+    subtext: string;
+    isAlert?: boolean;
+}) {
+    return (
+        <Card
+            className={cn(
+                "p-8 t-card border-none shadow-xl group hover:-translate-y-1",
+                isAlert ? "bg-rose-50 dark:bg-rose-950/20" : "bg-card",
+            )}
+        >
+            <div className="flex justify-between items-start mb-6">
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground group-hover:text-primary transition-colors">
+                    {label}
+                </span>
+                {isAlert ? (
+                    <AlertCircle
+                        size={20}
+                        className="text-rose-500 animate-pulse"
+                    />
+                ) : (
+                    <Zap
+                        size={20}
+                        className="text-primary opacity-20 group-hover:opacity-100 transition-[color,background-color,border-color,box-shadow,opacity,transform]"
+                    />
+                )}
+            </div>
+            <div className="space-y-1">
+                <div
+                    className={cn(
+                        "text-5xl font-bold tracking-tighter transition-transform group-hover:translate-x-1 duration-500",
+                        isAlert ? "text-rose-600" : "text-foreground",
+                    )}
+                >
+                    {value}
+                </div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    {subtext}
+                </p>
+            </div>
+        </Card>
+    );
+}

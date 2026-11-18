@@ -1,0 +1,164 @@
+"use client";
+
+import { Link } from "@tanstack/react-router";
+import type { LucideIcon } from "lucide-react";
+import {
+    ArrowLeft,
+    BrickWallShield,
+    Building,
+    Clock,
+    Gift,
+    Images,
+    LayoutDashboard,
+    LayoutList,
+    Megaphone,
+    MessageSquare,
+    Package,
+    Palette,
+    ShoppingCart,
+    Ticket,
+    UserCog,
+    Users,
+} from "lucide-react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import type { NavItem } from "@/config/admin-navigation";
+import { useFeatures } from "@/hooks/useFeatures";
+import { usePathname } from "@/lib/navigation";
+import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/store/auth-store";
+
+const ICON_MAP: Record<string, LucideIcon> = {
+    LayoutDashboard,
+    Package,
+    ShoppingCart,
+    Users,
+    Ticket,
+    LayoutList,
+    Megaphone,
+    Images,
+    BrickWallShield,
+    UserCog,
+    Building,
+    MessageSquare,
+    Palette,
+    Clock,
+    Gift,
+};
+
+interface AdminSidebarProps {
+    items: NavItem[];
+}
+
+export default function AdminSidebar({ items }: AdminSidebarProps) {
+    const [sidebarOpen, _setSidebarOpen] = useState(true);
+    const pathname = usePathname();
+    const { isFeatureEnabled } = useFeatures();
+    const { user } = useAuthStore();
+
+    // Navigation items with requiredFeature
+
+    // Filter items based on features and roles
+    const filteredItems = items.filter((item) => {
+        // Role check — tenant admins manage their own (tenant-scoped) roles
+        if (item.adminOnly && !user?.isAdmin) {
+            return false;
+        }
+
+        // Feature checks (dynamic)
+        const requiredFeatures = [
+            ...(item.requiredFeature ? [item.requiredFeature] : []),
+            ...(item.requiredFeatures ?? []),
+        ];
+        if (requiredFeatures.length > 0) {
+            return requiredFeatures.every((feature) =>
+                isFeatureEnabled(feature),
+            );
+        }
+
+        return true;
+    });
+
+    return (
+        <aside
+            className={cn(
+                "hidden md:flex flex-col border-r border-border bg-background transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-300 ease-in-out",
+                sidebarOpen ? "w-64" : "w-20",
+            )}
+        >
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-border h-16">
+                {sidebarOpen ? (
+                    <div className="flex flex-col leading-none">
+                        <h2 className="text-sm font-bold uppercase tracking-widest text-foreground">
+                            Consola
+                        </h2>
+                        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mt-0.5">
+                            Centro de control
+                        </span>
+                    </div>
+                ) : (
+                    <div className="w-full flex justify-center">
+                        <span className="text-sm font-bold">X</span>
+                    </div>
+                )}
+            </div>
+
+            {/* Scrollable menu */}
+            <ScrollArea className="flex-1">
+                <nav className="p-3 flex flex-col gap-1">
+                    {filteredItems.map(
+                        ({ href, label, icon: iconName, exact }) => {
+                            const Icon = ICON_MAP[iconName] || LayoutDashboard;
+                            const isActive = exact
+                                ? pathname === href
+                                : pathname.startsWith(href);
+
+                            return (
+                                <Link key={href} to={href}>
+                                    <Button
+                                        variant={isActive ? "default" : "ghost"}
+                                        className={cn(
+                                            "w-full justify-start gap-3 h-10 rounded-md transition-[color,background-color,border-color,box-shadow,opacity,transform] font-medium text-xs tracking-tight",
+                                            isActive
+                                                ? "bg-primary text-primary-foreground shadow-sm"
+                                                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                                        )}
+                                    >
+                                        <Icon
+                                            className={cn(
+                                                "size-4",
+                                                isActive
+                                                    ? "opacity-100"
+                                                    : "opacity-70",
+                                            )}
+                                        />
+                                        {sidebarOpen && (
+                                            <span className="truncate">
+                                                {label}
+                                            </span>
+                                        )}
+                                    </Button>
+                                </Link>
+                            );
+                        },
+                    )}
+                </nav>
+            </ScrollArea>
+
+            <div className="p-4 border-t border-border/50">
+                <Link
+                    to="/"
+                    className="group flex items-center gap-3 px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-[color,background-color,border-color,box-shadow,opacity,transform]"
+                >
+                    <ArrowLeft
+                        size={14}
+                        className="transition-transform group-hover:-translate-x-1"
+                    />
+                    {sidebarOpen && "Volver a la Grilla"}
+                </Link>
+            </div>
+        </aside>
+    );
+}

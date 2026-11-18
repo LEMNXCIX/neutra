@@ -1,0 +1,45 @@
+import { getRequestHeader } from "@tanstack/react-start/server";
+import { cache } from "react";
+import { tenantService } from "@/services/tenant.service";
+import type { TenantBranding } from "@/types/tenant";
+
+/**
+ * Resolve the current tenant branding from the x-tenant-slug header
+ * injected by the proxy middleware. Returns null when there is no tenant
+ * context (e.g. superadmin) or the fetch fails. Never throws: theming is
+ * decorative and must not block rendering.
+ *
+ * Wrapped in React `cache` so the root layout and a page that both ask for it
+ * during one render share a single backend round trip.
+ */
+export const getTenantBrandingFromHeaders = cache(
+    async (): Promise<TenantBranding | null> => {
+        try {
+            const tenantSlug = getRequestHeader("x-tenant-slug");
+            if (!tenantSlug) return null;
+
+            const tenant = await tenantService.getBySlug(tenantSlug);
+            return tenant?.config?.branding ?? null;
+        } catch {
+            return null;
+        }
+    },
+);
+
+/**
+ * Resolve the current tenant display name from the x-tenant-slug header.
+ * Returns null when there is no tenant context (e.g. superadmin).
+ */
+export const getTenantNameFromHeaders = cache(
+    async (): Promise<string | null> => {
+        try {
+            const tenantSlug = getRequestHeader("x-tenant-slug");
+            if (!tenantSlug) return null;
+
+            const tenant = await tenantService.getBySlug(tenantSlug);
+            return tenant?.name ?? null;
+        } catch {
+            return null;
+        }
+    },
+);

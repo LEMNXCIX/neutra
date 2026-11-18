@@ -1,0 +1,611 @@
+"use client";
+
+import { useForm } from "@tanstack/react-form";
+import { useSelector } from "@tanstack/react-store";
+import type React from "react";
+import { useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Spinner } from "@/components/ui/spinner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { PlatformFeature } from "@/services/features.service";
+import { tenantService } from "@/services/tenant.service";
+import { type CreateTenantData, type Tenant, TenantType } from "@/types/tenant";
+
+const EMPTY_PLATFORM_FEATURES: PlatformFeature[] = [];
+
+import { AlertCircle, Clock } from "lucide-react";
+import { toast } from "sonner";
+import {
+    HolidaysEditor,
+    WorkingHoursEditor,
+} from "@/components/admin/booking/working-hours-editor";
+import {
+    DEFAULT_WORKING_HOURS,
+    normalizeWorkingHours,
+} from "@/components/admin/booking/working-hours-utils";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+    applyServerErrors,
+    clearFieldErrors,
+    type FieldErrorSetter,
+} from "@/lib/form-errors";
+import { BrandingEditor } from "./BrandingEditor";
+
+const TENANT_FIELDS = ["name", "slug", "type", "config"] as const;
+
+interface TenantFormProps {
+    tenant?: Tenant | null;
+    onSuccess: () => void;
+    onCancel?: () => void;
+    submitLabel?: string;
+    isWizard?: boolean;
+    initialPlatformFeatures?: PlatformFeature[];
+}
+
+interface TabContentProps {
+    formData: CreateTenantData;
+    setFormData: React.Dispatch<React.SetStateAction<CreateTenantData>>;
+    updateConfig: (
+        section: "branding" | "settings" | "features",
+        key: string,
+        value: any,
+    ) => void;
+    toggleFeature: (key: string) => void;
+    isWizard?: boolean;
+    setActiveTab: (tab: string) => void;
+    platformFeatures: PlatformFeature[];
+    tenant?: Tenant | null;
+}
+
+function GeneralTabContent({
+    formData,
+    setFormData,
+    isWizard,
+    setActiveTab,
+    tenant,
+}: TabContentProps) {
+    return (
+        <TabsContent value="general" className="py-4 space-y-4">
+            <div className="space-y-2">
+                <Label>Name</Label>
+                <Input
+                    value={formData.name}
+                    onChange={(e) => {
+                        const name = e.target.value;
+                        const slug =
+                            !tenant && !formData.slug
+                                ? name
+                                      .toLowerCase()
+                                      .replace(/[^a-z0-9]/g, "-")
+                                      .replace(/-+/g, "-")
+                                : formData.slug;
+                        setFormData((prev) => ({
+                            ...prev,
+                            name,
+                            slug,
+                        }));
+                    }}
+                    placeholder="Mi Tienda Increíble"
+                    className="h-12"
+                />
+            </div>
+            <div className="space-y-2">
+                <Label>Slug (Subdomain)</Label>
+                <Input
+                    value={formData.slug}
+                    onChange={(e) =>
+                        setFormData((prev) => ({
+                            ...prev,
+                            slug: e.target.value,
+                        }))
+                    }
+                    placeholder="my-store"
+                    className="h-12"
+                />
+                <p className="text-xs text-muted-foreground">
+                    Will be accessed at {formData.slug || "your-slug"}
+                    .xcix.ec
+                </p>
+            </div>
+            <div className="space-y-2">
+                <Label>Type</Label>
+                <Select
+                    value={formData.type}
+                    onValueChange={(val) =>
+                        setFormData((prev) => ({
+                            ...prev,
+                            type: val as TenantType,
+                        }))
+                    }
+                >
+                    <SelectTrigger className="h-12">
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value={TenantType.STORE}>
+                            Tienda (comercio electrónico)
+                        </SelectItem>
+                        <SelectItem value={TenantType.BOOKING}>
+                            Booking (Services)
+                        </SelectItem>
+                        <SelectItem value={TenantType.HYBRID}>
+                            Hybrid
+                        </SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+            {isWizard && (
+                <div className="pt-4 flex justify-end">
+                    <Button
+                        type="button"
+                        onClick={() => setActiveTab("branding")}
+                        className="font-bold"
+                    >
+                        Siguiente paso: Marca →
+                    </Button>
+                </div>
+            )}
+        </TabsContent>
+    );
+}
+
+function BrandingTabContent({
+    formData,
+    setFormData,
+    isWizard,
+    setActiveTab,
+}: TabContentProps) {
+    return (
+        <TabsContent value="branding" className="py-4 space-y-4">
+            <BrandingEditor
+                value={formData.config?.branding}
+                onChange={(branding) =>
+                    setFormData((prev) => ({
+                        ...prev,
+                        config: { ...prev.config, branding },
+                    }))
+                }
+            />
+            {isWizard && (
+                <div className="pt-4 flex justify-between">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setActiveTab("general")}
+                    >
+                        ← Volver
+                    </Button>
+                    <Button
+                        type="button"
+                        onClick={() => setActiveTab("settings")}
+                        className="font-bold"
+                    >
+                        Siguiente paso: Configuración →
+                    </Button>
+                </div>
+            )}
+        </TabsContent>
+    );
+}
+
+function SettingsTabContent({
+    formData,
+    setFormData,
+    updateConfig,
+    isWizard,
+    setActiveTab,
+}: TabContentProps) {
+    const businessHours = normalizeWorkingHours(
+        formData.config?.settings?.businessHours ?? DEFAULT_WORKING_HOURS,
+    );
+    const holidays: string[] = formData.config?.settings?.holidays ?? [];
+    return (
+        <TabsContent value="settings" className="py-4 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label>Correo de soporte</Label>
+                    <Input
+                        value={formData.config?.settings?.supportEmail || ""}
+                        onChange={(e) =>
+                            updateConfig(
+                                "settings",
+                                "supportEmail",
+                                e.target.value,
+                            )
+                        }
+                        placeholder="support@example.com"
+                        className="h-12"
+                    />
+                </div>
+                <div className="space-y-2">
+                    <Label>Website URL</Label>
+                    <Input
+                        value={formData.config?.settings?.websiteUrl || ""}
+                        onChange={(e) =>
+                            updateConfig(
+                                "settings",
+                                "websiteUrl",
+                                e.target.value,
+                            )
+                        }
+                        placeholder="https://example.com"
+                        className="h-12"
+                    />
+                </div>
+                <div className="space-y-2">
+                    <Label>Currency</Label>
+                    <Select
+                        value={formData.config?.settings?.currency || "USD"}
+                        onValueChange={(val) =>
+                            updateConfig("settings", "currency", val)
+                        }
+                    >
+                        <SelectTrigger className="h-12">
+                            <SelectValue placeholder="Seleccionar moneda" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="USD">USD ($)</SelectItem>
+                            <SelectItem value="EUR">EUR (€)</SelectItem>
+                            <SelectItem value="GBP">GBP (£)</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-2">
+                    <Label>Language</Label>
+                    <Select
+                        value={formData.config?.settings?.language || "es"}
+                        onValueChange={(val) =>
+                            updateConfig("settings", "language", val)
+                        }
+                    >
+                        <SelectTrigger className="h-12">
+                            <SelectValue placeholder="Seleccionar idioma" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="es">Español</SelectItem>
+                            <SelectItem value="en">English</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+            <div className="space-y-2">
+                <Label className="flex items-center gap-1.5">
+                    <Clock className="size-3.5" /> Horario del local
+                </Label>
+                <WorkingHoursEditor
+                    value={businessHours}
+                    onChange={(value) =>
+                        setFormData((prev) => ({
+                            ...prev,
+                            config: {
+                                ...prev.config,
+                                settings: {
+                                    ...prev.config?.settings,
+                                    businessHours: value,
+                                },
+                            },
+                        }))
+                    }
+                />
+            </div>
+            <div className="space-y-2">
+                <Label>Feriados</Label>
+                <HolidaysEditor
+                    value={holidays}
+                    onChange={(value) =>
+                        setFormData((prev) => ({
+                            ...prev,
+                            config: {
+                                ...prev.config,
+                                settings: {
+                                    ...prev.config?.settings,
+                                    holidays: value,
+                                },
+                            },
+                        }))
+                    }
+                />
+            </div>
+            {isWizard && (
+                <div className="pt-4 flex justify-between">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setActiveTab("branding")}
+                    >
+                        ← Volver
+                    </Button>
+                    <Button
+                        type="button"
+                        onClick={() => setActiveTab("features")}
+                        className="font-bold"
+                    >
+                        Siguiente paso: Funcionalidades →
+                    </Button>
+                </div>
+            )}
+        </TabsContent>
+    );
+}
+
+function FeaturesTabContent({
+    formData,
+    toggleFeature,
+    isWizard,
+    setActiveTab,
+    platformFeatures,
+}: TabContentProps) {
+    if (!isWizard) return null;
+    return (
+        <TabsContent value="features" className="py-4 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {platformFeatures.map((feature) => (
+                    <button
+                        key={feature.id}
+                        type="button"
+                        className={`flex items-start gap-3 p-4 border rounded-xl transition-all cursor-pointer hover:border-primary/50 ${formData.config?.features?.[feature.key] ? "border-primary bg-primary/5 shadow-sm" : "border-border"}`}
+                        onClick={() => toggleFeature(feature.key)}
+                    >
+                        <Checkbox
+                            id={feature.id}
+                            checked={!!formData.config?.features?.[feature.key]}
+                            onCheckedChange={() => toggleFeature(feature.key)}
+                            className="mt-1"
+                        />
+                        <div className="space-y-1">
+                            <Label
+                                htmlFor={feature.id}
+                                className="font-bold cursor-pointer"
+                            >
+                                {feature.name}
+                            </Label>
+                            <p className="text-xs text-muted-foreground">
+                                {feature.description}
+                            </p>
+                            <p className="text-xs font-bold text-primary">
+                                ${feature.price}/mo
+                            </p>
+                        </div>
+                    </button>
+                ))}
+            </div>
+            <div className="pt-4 flex justify-between">
+                <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setActiveTab("settings")}
+                >
+                    ← Volver
+                </Button>
+            </div>
+        </TabsContent>
+    );
+}
+
+export function TenantForm({
+    tenant,
+    onSuccess,
+    onCancel,
+    submitLabel,
+    isWizard,
+    initialPlatformFeatures = EMPTY_PLATFORM_FEATURES,
+}: TenantFormProps) {
+    const [isSaving, setIsSaving] = useState(false);
+    const [serverError, setServerError] = useState("");
+    const [platformFeatures, _setPlatformFeatures] = useState<
+        PlatformFeature[]
+    >(initialPlatformFeatures);
+
+    const form = useForm({
+        defaultValues: {
+            name: tenant?.name || "",
+            slug: tenant?.slug || "",
+            type: tenant?.type || TenantType.STORE,
+            config: tenant?.config || { features: {} },
+        },
+        validators: {
+            onSubmit: ({ value }) => {
+                if (!value.name || !value.slug) {
+                    return "Nombre y slug son obligatorios";
+                }
+                return undefined;
+            },
+        },
+        onSubmitInvalid: () => {
+            toast.error("Nombre y slug son obligatorios");
+        },
+        onSubmit: async ({ value }) => {
+            clearFieldErrors(TENANT_FIELDS, setFieldServerError);
+            setIsSaving(true);
+            setServerError("");
+            try {
+                if (tenant) {
+                    await tenantService.update(tenant.id, value);
+                    toast.success("Tenant actualizado");
+                } else {
+                    await tenantService.create(value);
+                    toast.success("¡Tenant creado correctamente!");
+                }
+                onSuccess();
+            } catch (err) {
+                applyServerErrors({
+                    error: err,
+                    fallback: "No pudimos guardar la organización.",
+                    knownFields: TENANT_FIELDS,
+                    setFormError: setServerError,
+                    setFieldError: setFieldServerError,
+                });
+            } finally {
+                setIsSaving(false);
+            }
+        },
+    });
+
+    const setFieldServerError: FieldErrorSetter = (field, message) =>
+        form.setFieldMeta(field as never, (prev) => ({
+            ...prev,
+            errorMap: {
+                ...prev?.errorMap,
+                onServer: message,
+            },
+        }));
+
+    // The tab editors are pure value/setter components. Feeding them the form
+    // store's values through the same functional-setter contract keeps their
+    // controlled behaviour (including the name→slug derivation) untouched.
+    const formData = useSelector(form.store, (state) => state.values);
+    const setFormData: React.Dispatch<
+        React.SetStateAction<CreateTenantData>
+    > = (updater) => {
+        const current = form.state.values;
+        const next =
+            typeof updater === "function"
+                ? (updater as (prev: CreateTenantData) => CreateTenantData)(
+                      current,
+                  )
+                : updater;
+        for (const key of Object.keys(next) as Array<keyof CreateTenantData>) {
+            if (!Object.is(next[key], current[key])) {
+                form.setFieldValue(key as never, next[key] as never);
+            }
+        }
+    };
+
+    const [activeTab, setActiveTab] = useState("general");
+
+    const updateConfig = (
+        section: "branding" | "settings" | "features",
+        key: string,
+        value: any,
+    ) => {
+        setFormData((prev) => ({
+            ...prev,
+            config: {
+                ...prev.config,
+                [section]: {
+                    ...prev.config?.[section],
+                    [key]: value,
+                },
+            },
+        }));
+    };
+
+    const toggleFeature = (key: string) => {
+        const currentFeatures = formData.config?.features || {};
+        updateConfig("features", key, !currentFeatures[key]);
+    };
+
+    return (
+        <form
+            onSubmit={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                void form.handleSubmit();
+            }}
+            className="space-y-6"
+        >
+            <Tabs
+                value={activeTab}
+                onValueChange={setActiveTab}
+                className="w-full"
+            >
+                <TabsList
+                    className={`grid w-full ${isWizard ? "grid-cols-4" : "grid-cols-3"}`}
+                >
+                    <TabsTrigger value="general">General</TabsTrigger>
+                    <TabsTrigger value="branding">Branding</TabsTrigger>
+                    <TabsTrigger value="settings">Settings</TabsTrigger>
+                    {isWizard && (
+                        <TabsTrigger value="features">Features</TabsTrigger>
+                    )}
+                </TabsList>
+
+                <GeneralTabContent
+                    formData={formData}
+                    setFormData={setFormData}
+                    updateConfig={updateConfig}
+                    toggleFeature={toggleFeature}
+                    isWizard={isWizard}
+                    setActiveTab={setActiveTab}
+                    platformFeatures={platformFeatures}
+                    tenant={tenant}
+                />
+                <BrandingTabContent
+                    formData={formData}
+                    setFormData={setFormData}
+                    updateConfig={updateConfig}
+                    toggleFeature={toggleFeature}
+                    isWizard={isWizard}
+                    setActiveTab={setActiveTab}
+                    platformFeatures={platformFeatures}
+                    tenant={tenant}
+                />
+                <SettingsTabContent
+                    formData={formData}
+                    setFormData={setFormData}
+                    updateConfig={updateConfig}
+                    toggleFeature={toggleFeature}
+                    isWizard={isWizard}
+                    setActiveTab={setActiveTab}
+                    platformFeatures={platformFeatures}
+                    tenant={tenant}
+                />
+                <FeaturesTabContent
+                    formData={formData}
+                    setFormData={setFormData}
+                    updateConfig={updateConfig}
+                    toggleFeature={toggleFeature}
+                    isWizard={isWizard}
+                    setActiveTab={setActiveTab}
+                    platformFeatures={platformFeatures}
+                    tenant={tenant}
+                />
+            </Tabs>
+
+            {serverError && (
+                <Alert variant="destructive">
+                    <AlertCircle className="size-4" aria-hidden="true" />
+                    <AlertDescription>{serverError}</AlertDescription>
+                </Alert>
+            )}
+
+            <div className="flex justify-end gap-3 pt-6 border-t">
+                {onCancel && (
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={onCancel}
+                        disabled={isSaving}
+                        className="rounded-xl"
+                    >
+                        Cancelar
+                    </Button>
+                )}
+                <Button
+                    type="submit"
+                    disabled={isSaving}
+                    className="px-8 font-bold shadow-lg shadow-primary/20 rounded-xl"
+                >
+                    {isSaving ? (
+                        <>
+                            <Spinner className="mr-2" /> Saving…
+                        </>
+                    ) : (
+                        submitLabel ||
+                        (tenant ? "Actualizar Tenant" : "Crear Mi Tienda")
+                    )}
+                </Button>
+            </div>
+        </form>
+    );
+}
