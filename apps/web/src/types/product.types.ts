@@ -1,21 +1,9 @@
-import type { Category } from "./category.types";
+// The Product entity is part of the shared wire contract; re-export it under
+// the name this module has always exposed.
+export type { Product } from "@neutra/commons";
 
-export interface Product {
-    id: string;
-    name: string;
-    description: string;
-    image: string | null; // Updated to match API - can be null
-    price: number;
-    stock: number; // Updated to match API - required, not optional
-    active: boolean;
-    ownerId: string;
-    createdAt?: Date;
-    updatedAt?: Date;
-    categories?: Category[];
-    tenantId: string;
-    tenant?: { id: string; name: string; slug: string };
-}
-
+// Front-only DTOs (commons exposes `CreateProductDto` / `UpdateProductDto`,
+// a different name and shape), kept unchanged.
 export interface CreateProductDTO {
     name: string;
     description: string;

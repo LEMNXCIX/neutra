@@ -1,3 +1,6 @@
+// Front-only projection: the UI reads `tenantId`, optional provider ids and
+// optional timestamps that the shared `User` wire contract does not carry.
+// `CreateUserDTO` also has no exact commons counterpart. Kept local.
 import type { Role } from "./role.types";
 
 export interface User {

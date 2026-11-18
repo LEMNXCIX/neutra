@@ -1,39 +1,43 @@
-export interface ErrorDetail {
-    code: string;
-    message: string;
-    field?: string;
-    domain?: string;
-    metadata?: Record<string, unknown>;
-}
+// Wire contract. @neutra/commons is the single source of truth: the envelope,
+// schemas, error codes and enums are re-exported so existing
+// `@/types/frontend-api` consumers keep their imports unchanged.
+export {
+    AppointmentStatus,
+    CategoryType,
+    ErrorCodes,
+    OrderStatus,
+    TenantType,
+    errorDetailSchema,
+    responsePaginationSchema,
+    standardResponseSchema,
+} from "@neutra/commons";
+export type {
+    ErrorCode,
+    ErrorDetail,
+    ResponsePagination as Pagination,
+    StandardResponse,
+} from "@neutra/commons";
 
-/** Backend pagination block (api-neutra-v2/types/api-response.ts). */
-export interface Pagination {
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-}
+// Entity/DTO names that exist verbatim in commons are re-exported too. These
+// are currently unused inside the web app but are part of the public surface
+// of this module, so their names are preserved.
+export type {
+    AddToCartDto,
+    Cart,
+    CartItem,
+    Category,
+    CreateOrderDto,
+    Order,
+    OrderItem,
+    Permission,
+    Product,
+    Slideshow,
+} from "@neutra/commons";
 
-/**
- * The backend envelope. The BFF forwards it untouched: only `errors[].code` is
- * a stable, translatable part of the contract, so `message` is never rendered
- * and `meta.traceId` / `pagination` must survive the round trip.
- */
-export interface StandardResponse<T = unknown> {
-    success: boolean;
-    statusCode: number;
-    message: string;
-    data?: T;
-    errors?: ErrorDetail[];
-    pagination?: Pagination;
-    meta: {
-        traceId: string;
-        timestamp: string;
-        [key: string]: unknown;
-    };
-}
-
-// Entities (based on Prisma Schema)
+// ---------------------------------------------------------------------------
+// Front-only shapes. The API wire contract has no equivalent for these, so
+// they remain local rather than being mapped to a different commons type.
+// ---------------------------------------------------------------------------
 
 export interface Role {
     id: string;
@@ -42,13 +46,6 @@ export interface Role {
     level: number;
     createdAt: string;
     updatedAt: string;
-}
-
-export interface Permission {
-    id: string;
-    name: string;
-    description?: string | null;
-    createdAt: string;
 }
 
 export interface User {
@@ -65,80 +62,6 @@ export interface User {
     createdAt: string;
     updatedAt: string;
 }
-
-export interface Category {
-    id: string;
-    name: string;
-    description?: string | null;
-    createdAt: string;
-    updatedAt: string;
-}
-
-export interface Product {
-    id: string;
-    name: string;
-    price: number;
-    description: string;
-    image?: string | null;
-    stock?: number;
-    ownerId: string;
-    owner?: User;
-    categories?: Category[];
-    createdAt: string;
-    updatedAt: string;
-}
-
-export interface CartItem {
-    id: string;
-    cartId: string;
-    productId: string;
-    product?: Product;
-    amount: number;
-}
-
-export interface Cart {
-    id: string;
-    userId: string;
-    items: CartItem[];
-    createdAt: string;
-    updatedAt: string;
-}
-
-export enum OrderStatus {
-    PENDIENTE = "PENDIENTE",
-    PAGADO = "PAGADO",
-    ENVIADO = "ENVIADO",
-    ENTREGADO = "ENTREGADO",
-}
-
-export interface OrderItem {
-    id: string;
-    orderId: string;
-    productId: string;
-    product?: Product;
-    amount: number;
-    price: number;
-}
-
-export interface Order {
-    id: string;
-    userId: string;
-    status: OrderStatus;
-    items: OrderItem[];
-    createdAt: string;
-    updatedAt: string;
-}
-
-export interface Slideshow {
-    id: string;
-    title: string;
-    img: string;
-    desc?: string | null;
-    createdAt: string;
-    updatedAt: string;
-}
-
-// Request DTOs
 
 export interface CreateUserDto {
     name: string;
@@ -160,15 +83,4 @@ export interface ProductCreateDto {
     price?: number;
     image?: string[]; // Note: Backend DTO says string[], schema says String? (single). Check controller.
     stock?: number;
-}
-
-export interface AddToCartDto {
-    productId: string;
-    quantity: number;
-}
-
-export interface CreateOrderDto {
-    userId: string;
-    items: Array<{ productId: string; quantity: number }>;
-    address?: string;
 }

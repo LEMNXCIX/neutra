@@ -1,15 +1,6 @@
-import type { Permission } from "./permission.types";
-
-export interface Role {
-    id: string;
-    name: string;
-    description?: string | null;
-    level: number;
-    active: boolean;
-    permissions?: Permission[];
-    createdAt: Date;
-    updatedAt: Date;
-}
+// Role entity is the shared wire contract; the DTO names below have no exact
+// commons counterpart (commons uses `CreateRoleDto` / `UpdateRoleDto`).
+export type { Role } from "@neutra/commons";
 
 export interface CreateRoleDTO {
     name: string;

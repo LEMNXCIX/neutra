@@ -1,3 +1,5 @@
+// Front-only projection: `CartItem` extends the full front `Product`, and the
+// DTO is named `AddToCartDTO` (commons has `AddToCartDto`). Kept local.
 import type { Product } from "./product.types";
 
 export interface CartItem extends Product {

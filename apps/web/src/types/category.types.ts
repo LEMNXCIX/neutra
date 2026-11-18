@@ -1,17 +1,11 @@
-export type CategoryType = "PRODUCT" | "SERVICE";
+// Wire enum + entity owned by @neutra/commons. Re-export under the existing
+// local names so routes/services need no import changes.
+import { CategoryType } from "@neutra/commons";
+export { CategoryType };
+export type { Category } from "@neutra/commons";
 
-export interface Category {
-    id: string;
-    name: string;
-    description?: string | null;
-    type: CategoryType;
-    active: boolean;
-    tenantId: string;
-    tenant?: { id: string; name: string; slug: string };
-    createdAt: string;
-    updatedAt: string;
-}
-
+// The DTO names below have no exact counterpart in commons (commons uses
+// `CreateCategoryDto` / `UpdateCategoryDto`), so they remain front-only.
 export interface CreateCategoryDTO {
     name: string;
     description?: string;

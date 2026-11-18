@@ -1,9 +1,11 @@
-export enum TenantType {
-    STORE = "STORE",
-    BOOKING = "BOOKING",
-    HYBRID = "HYBRID",
-}
+// `TenantType` is a wire enum owned by @neutra/commons; re-export it so
+// existing imports from `@/types/tenant` keep working unchanged.
+import { TenantType } from "@neutra/commons";
+export { TenantType };
 
+// The remaining Tenant shapes are front-only projections: the web app reads
+// extra fields (rich branding, notifications, string timestamps) that the
+// shared contract does not carry, so they stay local.
 export interface Tenant {
     id: string;
     name: string;

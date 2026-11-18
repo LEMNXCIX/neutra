@@ -1,6 +1,9 @@
 /**
  * Slideshow Type Definitions
  * Based on backend DTOs
+ *
+ * Front-only projection: the UI reads `tenantId`, which the shared
+ * `Slideshow` wire contract in @neutra/commons does not carry. Kept local.
  */
 
 export interface Slideshow {

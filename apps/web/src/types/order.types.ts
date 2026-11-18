@@ -1,8 +1,11 @@
 import type { Product } from "./product.types";
 
-// Updated to match API OrderStatus
-export type OrderStatus = "PENDIENTE" | "PAGADO" | "ENVIADO" | "ENTREGADO";
+// `OrderStatus` is the shared wire enum; re-export it under the existing name.
+import { OrderStatus } from "@neutra/commons";
+export { OrderStatus };
 
+// Order / OrderItem are front-only projections: the UI reads `coupon`,
+// `address` and string timestamps that the shared contract does not carry.
 export interface OrderItem {
     id: string;
     orderId: string;
@@ -38,6 +41,8 @@ export interface Order {
     };
 }
 
+// DTO names have no exact commons counterpart (commons uses
+// `CreateOrderDto` / `UpdateOrderDto`).
 export interface CreateOrderDTO {
     userId: string;
     items: {

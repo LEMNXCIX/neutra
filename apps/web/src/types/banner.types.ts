@@ -1,3 +1,6 @@
+// Front-only projection: the UI reads `tenant` / `tenantId`, which the shared
+// `Banner` wire contract in @neutra/commons does not carry. Kept local.
+
 export interface Banner {
     id: string;
     tenantId: string;
