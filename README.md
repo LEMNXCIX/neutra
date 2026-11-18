@@ -9,8 +9,12 @@ lives at the root.
 - `apps/api/` — multi-tenant Express/TypeScript API (imported from
   `api-neutra-v2`, full git history preserved).
 - `apps/cms/` — Strapi CMS (imported from `neutra-cms`, full git history preserved).
+- `apps/web/` — React/TanStack front end (imported from `neutra-frontend`, full
+  git history preserved, workspace name `web`). It consumes `@neutra/commons`
+  via `workspace:*` as the single source of truth for wire contracts, and runs
+  on Node 22 in production (bun is the installer/builder only).
 - `packages/commons/` — `@neutra/commons`, the single source of truth for
-  wire contracts shared between the API and the CMS.
+  wire contracts shared between the API, the CMS and the web app.
 
 ## Root commands
 
@@ -25,24 +29,68 @@ lives at the root.
 | `bun run check:arch` | Run architecture guards for `apps/api`. |
 | `bun run doctor:api` | Run the API doctor diagnostics. |
 | `bun run commons:check` | Check `@neutra/commons` alignment. |
+| `bun run verify:production` | Verify the API production build. |
+
+Web workspace gates (also wired into CI):
+
+| Command | Description |
+| --- | --- |
+| `bun run --cwd apps/web typecheck` | Typecheck the web workspace. |
+| `bun run --cwd apps/web test` | Run the web Vitest suite (includes the error-code drift guard). |
+| `bun run --cwd apps/web build` | Build the web app for production. |
+
+## Verification gates
 
 `scripts/verify-layout.mjs` asserts the root layout and that the imported API
 history is present; run it with `node scripts/verify-layout.mjs`.
-`scripts/verify-dod.mjs` asserts the full definition-of-done gate (single
-lockfile, no `class-validator`/`class-transformer` in the API, `@neutra/commons`
-as `workspace:*`, an isomorphic commons package, the five migration SHAs, a
-clean tree and an untouched frontend); run it with `node scripts/verify-dod.mjs`.
 
-## Known degradation: frontend error-code drift guard
+`scripts/verify-dod.mjs` asserts the full phase-1 definition-of-done gate
+(single lockfile, no `class-validator`/`class-transformer` in the API,
+`@neutra/commons` as `workspace:*`, an isomorphic commons package, the five
+migration SHAs, a clean tree and an untouched frontend); run it with
+`node scripts/verify-dod.mjs`.
 
-The drift guard in `neutra-frontend/src/lib/__tests__/error-codes.test.ts` was
-**not modified** by this migration — the `neutra-frontend` repository itself is
-left untouched (`scripts/.frontend-baseline.txt` is the unchanged baseline
-verified by `scripts/verify-dod.mjs`). It therefore **still reads** the literal
-path `../api-neutra-v2/types/error-codes.ts`. That path is now **stale**: the API
-was moved into `apps/api` in this monorepo, so the old sibling-repo file no
-longer resolves, while the authoritative wire error codes now live in
-`@neutra/commons` here. The test detects the missing file and silently skips the
-drift check (it does not fail), so the guard is **blind until phase 2**, when
-`neutra-frontend` is incorporated as `apps/web` and the test is repointed at
-`@neutra/commons`.
+Phase 2 adds three web guards:
+
+- `scripts/verify-web-contracts.mjs` fails if a wire contract (envelope, error
+  detail, wire enum or error code) is redefined inside `apps/web/src` instead
+  of coming from `@neutra/commons`.
+- `scripts/verify-web-ci.mjs` checks that CI runs the web typecheck/test/build
+  gates plus the tenant smoke, keeps the Node 22 runtime / bun-only installer,
+  preserves the CMS exclusion and respects build ordering.
+- `scripts/verify-web-dod.mjs` is the final phase-2 gate: it asserts the web
+  history/name, a single lockfile, `workspace:*` contracts, both web guards,
+  the reattached drift guard, a clean tree and that the phase-1 gate is still
+  7/7. Run it with `node scripts/verify-web-dod.mjs` **after committing** —
+  its clean-tree check requires it.
+
+## Web error-code drift guard (reattached in phase 2)
+
+In phase 1 the drift guard at
+`neutra-frontend/src/lib/__tests__/error-codes.test.ts` was left untouched and
+read the now-stale literal path `../api-neutra-v2/types/error-codes.ts`; the
+missing file made it silently skip the check. In phase 2 the front end was
+incorporated as `apps/web` and that guard was **reattached to the real source
+of truth**: it now imports `ErrorCodes` from `@neutra/commons`, always runs
+(no "sibling repo absent" skip path) and contains no `BACKEND_CODES` fallback.
+`scripts/verify-web-dod.mjs` asserts both properties. The sibling repositories
+`neutra-frontend` and `api-neutra-v2` remain untouched on disk.
+
+## Documented deviations (phase-2 acceptance)
+
+Two conditions are accepted as-is; they are recorded here as deviations, not
+failures, and the DoD gate does not try to "fix" them:
+
+1. **`npm.audit` reports WARN in the `ci` doctor profile.** The doctor shells
+   out to `bun audit --json`, which carries no `fixAvailable` metadata, so the
+   23 real advisories (13 high, 1 critical) are classified as "without a
+   non-breaking fix" and the check reports WARN rather than FAIL. This is
+   accepted: the gate still blocks on registry/unverifiable failures, no
+   dependency is upgraded, and no blocking check is suppressed.
+2. **Tenant smoke proves router reachability, not subdomain resolution.** The
+   smoke runs against the root host and hits the non-static SSE route
+   `/api/revalidate/events` (asserting HTTP 200) plus a separate static
+   `/icon.svg` artifact check. It therefore verifies the web router is reachable
+   with `x-tenant-slug` / `x-tenant-id` headers, but does **not** exercise
+   subdomain-based tenant resolution. This limitation is documented and the
+   smoke is left as-is.
