@@ -34,6 +34,15 @@ jobs:
       # request without this. A throwaway value is enough: the CI smoke hits a
       # static asset and the parity suite mocks every backend call.
       BACKEND_API_URL: http://localhost:4001/api
+      # docker-compose.prod.yml declares these five with `:?`, and the API
+      # doctor's blocking `docker.compose` check validates both compose files.
+      # The CMS is excluded from the root build, so throwaway values are enough
+      # for `docker compose config --quiet`; no CMS service is started here.
+      CMS_APP_KEYS: ci-cms-app-keys
+      CMS_API_TOKEN_SALT: ci-cms-api-token-salt
+      CMS_ADMIN_JWT_SECRET: ci-cms-admin-jwt-secret
+      CMS_JWT_SECRET: ci-cms-jwt-secret
+      CMS_ENCRYPTION_KEY: ci-cms-encryption-key
     services:
       postgres:
         image: postgres:16-alpine

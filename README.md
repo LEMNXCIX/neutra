@@ -94,3 +94,12 @@ failures, and the DoD gate does not try to "fix" them:
    with `x-tenant-slug` / `x-tenant-id` headers, but does **not** exercise
    subdomain-based tenant resolution. This limitation is documented and the
    smoke is left as-is.
+3. **CI supplies throwaway `CMS_*` values solely for compose validation.** The
+   job `env:` in `.github/workflows/CI.yml` sets `CMS_APP_KEYS`,
+   `CMS_API_TOKEN_SALT`, `CMS_ADMIN_JWT_SECRET`, `CMS_JWT_SECRET` and
+   `CMS_ENCRYPTION_KEY` to throwaway values because
+   `apps/api/docker-compose.prod.yml` declares them with `:?` and the doctor's
+   blocking `docker.compose` check validates that file with
+   `docker compose config --quiet`. The CMS is excluded from the root build and
+   no CMS service is started in CI, so these are placeholder values only — not
+   real credentials.
