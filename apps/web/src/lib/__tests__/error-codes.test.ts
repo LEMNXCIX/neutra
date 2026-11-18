@@ -1,16 +1,11 @@
 /**
- * The backend publishes its error codes in
- * `api-neutra-v2/types/error-codes.ts` and says they exist "for better error
- * handling and client-side error display". This test is the contract check: if
- * a code is added there and not translated here, it fails.
- *
- * The sibling repo is read when present, which is the drift check on a dev
- * machine. When it is absent, as in a checkout of this repo alone, the
- * coverage assertions still run against the codes this module maps, so the suite
- * never breaks for a missing neighbour.
+ * The backend publishes its error codes as `@neutra/commons`' `ErrorCodes` and
+ * says they exist "for better error handling and client-side error display".
+ * This test is the contract check: if a code is added to that shared catalog
+ * and not translated here, it fails. There is no "sibling repo is absent" skip
+ * path — the guard is real and always runs.
  */
-import { existsSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { ErrorCodes } from "@neutra/commons";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -20,25 +15,7 @@ import {
     resolutionFor,
     translateErrorDetail,
 } from "@/lib/error-messages";
-
-// src/lib/__tests__ -> src/lib -> src -> neutra-frontend -> Projects
-const PROJECTS_DIR = resolve(__dirname, "../../../..");
-const BACKEND_CODES = join(PROJECTS_DIR, "api-neutra-v2/types/error-codes.ts");
-
-const readPublishedCodes = (): string[] | null => {
-    if (!existsSync(BACKEND_CODES)) return null;
-    const source = readFileSync(BACKEND_CODES, "utf8");
-    const codes = new Set<string>();
-    // Parse NAME = "WIRE_CODE" / NAME: "WIRE_CODE" pairs and take the value.
-    // Matching on a known domain prefix instead would be circular: a brand new
-    // domain could never be seen by a pattern that only knows the old ones.
-    for (const match of source.matchAll(
-        /^\s*[A-Z][A-Z0-9_]*\s*[:=]\s*["']([A-Z][A-Z0-9_]*)["']/gm,
-    )) {
-        codes.add(match[1]);
-    }
-    return [...codes];
-};
+import { assertErrorCodeCoverage } from "../../../tests/helpers/error-coverage";
 
 describe("error message translation", () => {
     it("translates the reported case: short password", () => {
@@ -173,32 +150,48 @@ describe("error message translation", () => {
 });
 
 describe("coverage of the published backend codes", () => {
-    const published = readPublishedCodes();
+    // The catalog is the shared SSOT, not a file in a sibling checkout.
+    const published = Object.values(ErrorCodes) as string[];
 
-    it.skipIf(!published)(
-        "every code the backend publishes resolves to real Spanish copy",
-        () => {
-            expect(published).not.toBeNull();
-            const untranslated = (published as string[]).filter(
-                (code) => resolutionFor(code) === "none",
-            );
-            expect(
-                untranslated,
-                `códigos sin traducir: ${untranslated.join(", ")}`,
-            ).toEqual([]);
-        },
-    );
+    it("every published code resolves to real Spanish copy", () => {
+        const untranslated = published.filter(
+            (code) => resolutionFor(code) === "none",
+        );
+        expect(
+            untranslated,
+            `códigos sin traducir: ${untranslated.join(", ")}`,
+        ).toEqual([]);
+    });
 
-    it.skipIf(!published)("never renders the raw backend message", () => {
-        for (const code of published as string[]) {
+    it("assertErrorCodeCoverage accepts a map covering every published code", () => {
+        // `resolutionFor` is the source of truth: a code resolves either to a
+        // specific entry in CODE_MESSAGES or to its domain fallback. Any new
+        // catalog code that resolves to "none" is absent from this map and the
+        // guard throws, so the drift check cannot silently skip it.
+        const translations: Record<string, string> = {};
+        for (const code of published) {
+            if (resolutionFor(code) !== "none") {
+                translations[code] = translateErrorDetail({
+                    code,
+                    message: "raw backend text",
+                });
+            }
+        }
+        expect(() =>
+            assertErrorCodeCoverage(published, translations),
+        ).not.toThrow();
+    });
+
+    it("never renders the raw backend message", () => {
+        for (const code of published) {
             expect(
                 translateErrorDetail({ code, message: "raw backend text" }),
             ).not.toContain("raw backend text");
         }
     });
 
-    it.skipIf(!published)("reads a non-trivial number of codes", () => {
-        expect((published as string[]).length).toBeGreaterThan(50);
+    it("reads a non-trivial number of codes", () => {
+        expect(published.length).toBeGreaterThan(50);
     });
 
     it("reports how each resolution was reached", () => {
@@ -209,7 +202,6 @@ describe("coverage of the published backend codes", () => {
     });
 
     it("covers the codes this module maps explicitly", () => {
-        // Runs without the sibling repo so the suite is self-contained.
         for (const code of [
             "AUTH_INVALID_CREDENTIALS",
             "VALIDATION_INVALID_FORMAT",
