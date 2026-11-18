@@ -19,5 +19,8 @@
   },
   "devDependencies": {
     "turbo": "^2.10.12"
+  },
+  "overrides": {
+    "@types/express-serve-static-core": "5.1.0"
   }
 }

@@ -118,13 +118,10 @@ jobs:
       - name: Check architecture boundaries
         run: bun run check:arch
 
-      # Pre-existing baseline: apps/api currently has 50 TS2345 controller
-      # errors that are explicitly out of scope for the monorepo migration.
-      # Keep the step visible but NON-BLOCKING; the real quality gate is the
-      # unit/integration tests plus the drift and architecture guards above.
-      # Re-enable as blocking once that baseline is cleared.
-      - name: Typecheck (non-blocking baseline)
-        continue-on-error: true
+      # The npm lockfile pinned @types/express-serve-static-core 5.1.0; the
+      # root `overrides` keeps that pin under bun too, so req.params stays
+      # `string` and the API typecheck is green and blocking.
+      - name: Typecheck
         run: bun run typecheck
 
       # --include-integration is what makes the integration check run at all;
