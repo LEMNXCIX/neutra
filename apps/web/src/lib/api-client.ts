@@ -1,7 +1,7 @@
+import type { StandardResponse } from "@neutra/commons";
 import { createIsomorphicFn } from "@tanstack/react-start";
 import Cookies from "js-cookie";
 import { getBackendUrl } from "@/lib/backend-url";
-import type { StandardResponse } from "@/types/frontend-api";
 
 type ServerTenantContext = {
     tenantSlug: string | undefined;

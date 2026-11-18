@@ -10,7 +10,10 @@
  * Next route files until Task 6 replaces them.
  */
 
-import type { Pagination, StandardResponse } from "@/types/frontend-api";
+import type {
+    ResponsePagination as Pagination,
+    StandardResponse,
+} from "@neutra/commons";
 import {
     type ApiResponse,
     backendFetch,

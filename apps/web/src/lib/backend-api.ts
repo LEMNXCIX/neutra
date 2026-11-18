@@ -6,12 +6,12 @@
  * server utilities, never from next/headers.
  */
 
+import type { StandardResponse } from "@neutra/commons";
 import {
     getCookie,
     getRequest,
     getRequestHeader,
 } from "@tanstack/react-start/server";
-import type { StandardResponse } from "@/types/frontend-api";
 import { getBackendUrl } from "./backend-url";
 
 // ============================================================================
@@ -96,22 +96,17 @@ export interface ApiRequestConfig {
     next?: FetchCacheConfig;
 }
 
-export interface ApiResponse<T = unknown> {
+/**
+ * The local response alias is the shared commons envelope, not a second wire
+ * definition. Two relaxations stay for existing producers: `success` is the
+ * only required field (a 204 answer is `{ success: true }`) and the legacy
+ * `error` string is still accepted. `errors` now uses the commons
+ * `ErrorDetail` shape, so nested `metadata` is part of the contract.
+ */
+export type ApiResponse<T = unknown> = Partial<StandardResponse<T>> & {
     success: boolean;
-    data?: T;
     error?: string;
-    message?: string;
-    statusCode?: number;
-    errors?: Array<{
-        code: string;
-        message: string;
-        field?: string;
-        domain?: string;
-        metadata?: unknown;
-    }>;
-    pagination?: StandardResponse["pagination"];
-    meta?: StandardResponse["meta"];
-}
+};
 
 export interface ApiError extends Error {
     statusCode?: number;
