@@ -1,3 +1,4 @@
+import { ErrorCodes } from "@neutra/commons";
 import { describe, expect, it, vi } from "vitest";
 
 const toastError = vi.fn();
@@ -16,7 +17,7 @@ describe("reportError", () => {
                 message: "Validación fallida",
                 errors: [
                     {
-                        code: "AUTH_INVALID_CREDENTIALS",
+                        code: ErrorCodes.INVALID_CREDENTIALS,
                         message: "invalid credentials",
                         field: "password",
                     },
@@ -35,7 +36,7 @@ describe("reportError", () => {
         reportError(
             {
                 errors: [
-                    { code: "AUTH_TOKEN_EXPIRED", message: "token expired" },
+                    { code: ErrorCodes.TOKEN_EXPIRED, message: "token expired" },
                 ],
             },
             "fallback",

@@ -12,6 +12,7 @@
  * screen, and `extractErrorMessage` in cart-store walks arbitrary response
  * shapes on purpose rather than translating them.
  */
+import { ErrorCodes } from "@neutra/commons";
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -137,7 +138,7 @@ describe("no raw error message reaches the user", () => {
                 statusCode: 409,
                 errors: [
                     {
-                        code: "AUTH_EMAIL_TAKEN_IN_OTHER_TENANT",
+                        code: ErrorCodes.EMAIL_TAKEN_IN_OTHER_TENANT,
                         message: "EMAIL_TAKEN",
                     },
                 ],

@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 
+import { ErrorCodes } from "@neutra/commons";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createElement, type ReactNode } from "react";
@@ -126,7 +127,7 @@ describe("LoginForm", () => {
         mocks.mockLogin.mockRejectedValueOnce({
             errors: [
                 {
-                    code: "AUTH_INVALID_CREDENTIALS",
+                    code: ErrorCodes.INVALID_CREDENTIALS,
                     field: "email",
                     message: "Invalid email or password",
                 },
@@ -218,7 +219,7 @@ describe("FeatureDialog (admin editor)", () => {
         mocks.mockCreateFeature.mockRejectedValueOnce({
             errors: [
                 {
-                    code: "VALIDATION_INVALID_FORMAT",
+                    code: ErrorCodes.INVALID_FORMAT,
                     field: "name",
                     message: "invalid name",
                 },

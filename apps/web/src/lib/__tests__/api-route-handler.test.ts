@@ -6,6 +6,7 @@
  * forwarded untouched, the backend HTTP status is not rewritten, `errors[]`
  * survives, 204 has no body, and proxy-injected tenant headers beat cookies.
  */
+import { ErrorCodes } from "@neutra/commons";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /** The Start request context that `serverBackendFetch` reads. */
@@ -139,7 +140,7 @@ describe("createBffHandler", () => {
                     statusCode: 422,
                     message: "Invalid data",
                     errors: [
-                        { code: "VALIDATION_INVALID_FORMAT", message: "bad" },
+                        { code: ErrorCodes.INVALID_FORMAT, message: "bad" },
                     ],
                 },
                 422,

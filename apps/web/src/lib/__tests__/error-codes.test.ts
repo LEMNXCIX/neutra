@@ -20,7 +20,7 @@ import { assertErrorCodeCoverage } from "../../../tests/helpers/error-coverage";
 describe("error message translation", () => {
     it("translates the reported case: short password", () => {
         const message = translateErrorDetail({
-            code: "VALIDATION_INVALID_FORMAT",
+            code: ErrorCodes.INVALID_FORMAT,
             message: "password must be longer than or equal to 8 characters",
             field: "password",
             domain: "validation",
@@ -45,7 +45,7 @@ describe("error message translation", () => {
     it("never surfaces the backend message", () => {
         const raw = "password must be longer than or equal to 8 characters";
         const message = translateErrorDetail({
-            code: "AUTH_INVALID_CREDENTIALS",
+            code: ErrorCodes.INVALID_CREDENTIALS,
             message: raw,
             field: "password",
         });
@@ -94,7 +94,7 @@ describe("error message translation", () => {
     it("picks the first translatable detail from a list", () => {
         const message = firstTranslatedError([
             { code: "", message: "ignorame" },
-            { code: "AUTH_TOKEN_EXPIRED", message: "token expired" },
+            { code: ErrorCodes.TOKEN_EXPIRED, message: "token expired" },
         ]);
 
         expect(message).toContain("sesión expiró");
@@ -106,7 +106,7 @@ describe("error message translation", () => {
             firstErrorCode({
                 errors: [
                     {
-                        code: "AUTH_EMAIL_TAKEN_IN_OTHER_TENANT",
+                        code: ErrorCodes.EMAIL_TAKEN_IN_OTHER_TENANT,
                         message: "email already belongs to another tenant",
                         domain: "auth",
                     },
@@ -121,7 +121,7 @@ describe("error message translation", () => {
                 errors: [
                     { message: "sin code" },
                     {
-                        code: "AUTH_EMAIL_TAKEN_IN_OTHER_TENANT",
+                        code: ErrorCodes.EMAIL_TAKEN_IN_OTHER_TENANT,
                         message: "taken",
                     },
                 ],
