@@ -30,6 +30,10 @@ jobs:
       # A throwaway credential for a database that lives only as long as the
       # job, on the same footing as JWT_SECRET above.
       SUPER_ADMIN_PASSWORD: ci-super-admin-password
+      # The web server resolves its backend per request and refuses to boot a
+      # request without this. A throwaway value is enough: the CI smoke hits a
+      # static asset and the parity suite mocks every backend call.
+      BACKEND_API_URL: http://localhost:4001/api
     services:
       postgres:
         image: postgres:16-alpine
@@ -110,6 +114,14 @@ jobs:
       - name: Build shared contracts
         run: bun run --cwd packages/commons build
 
+      # The web app's serve-start-static.test.ts resolves dist/client/icon.svg,
+      # which is gitignored and only produced by a web build. turbo's
+      # `test.dependsOn: ["^build"]` builds dependencies (commons) but not web
+      # itself, so the root `Test` step below would otherwise fail on a fresh
+      # checkout. Build web here, before any typecheck or test step.
+      - name: Build web app
+        run: bun run --cwd apps/web build
+
       # Root-level drift guards run before typecheck/test so a contract or
       # architecture regression fails fast with a precise message.
       - name: Check shared contracts drift
@@ -132,3 +144,39 @@ jobs:
 
       - name: API Doctor
         run: bun run doctor:api -- --profile ci --include-integration --format text
+
+      # ---------- Web workspace gates ----------
+      # Install, shared-contract build and web build are already done above;
+      # these steps only consume those artifacts.
+      - name: Web typecheck
+        run: bun run --cwd apps/web typecheck
+
+      - name: Web test
+        run: bun run --cwd apps/web test
+
+      # Re-run the parity inventory on its own so a route/fixture drift is a
+      # visibly separate gate rather than buried in the full suite output.
+      - name: Web parity (route inventory)
+        run: bun run --cwd apps/web test tests/parity/
+
+      # Boot the built Node adapter and hit a static asset that exists only
+      # after the web build. The tenant headers mirror the real proxy contract
+      # and capture-parity.mjs's tenantHeaders().
+      - name: Web smoke (tenant headers)
+        run: |
+          bun run --cwd apps/web start:start &
+          WEB_PID=$!
+          trap 'kill $WEB_PID 2>/dev/null || true' EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS -o /dev/null \
+              -H "x-tenant-slug: store" \
+              -H "x-tenant-id: store" \
+              http://localhost:3001/icon.svg; then
+              break
+            fi
+            sleep 1
+          done
+          curl -fsS \
+            -H "x-tenant-slug: store" \
+            -H "x-tenant-id: store" \
+            http://localhost:3001/icon.svg

@@ -1,18 +1,24 @@
-FROM node:22-alpine
-
+# Development image. Same root build context as apps/web/Dockerfile:
+#   docker build -f apps/web/Dockerfile.dev -t neutra-web-dev .
+FROM oven/bun:1.4.4-alpine
 WORKDIR /app
 
-# Install dependencies
-COPY package*.json ./
-RUN npm install
+COPY package.json bun.lock ./
+COPY apps/web/package.json apps/web/package.json
+COPY packages/commons/package.json packages/commons/package.json
+RUN bun install --frozen-lockfile --ignore-scripts
 
-# Copy source
-COPY . .
+COPY packages/commons packages/commons
+COPY apps/web apps/web
+RUN bun run --cwd packages/commons build
 
+ENV NODE_ENV=development
 ENV PORT=3001
+# The composed API service is `app`; override for a locally running backend.
+ENV BACKEND_API_URL=http://app:3000/api
 
-# Expose the TanStack Start dev server port
+# Expose the TanStack Start dev server port.
 EXPOSE 3001
 
-# Start development server
-CMD ["npm", "run", "dev:start"]
+WORKDIR /app/apps/web
+CMD ["bun", "run", "dev:start"]

@@ -1,31 +1,45 @@
-FROM node:22-alpine AS builder
+# Build context is the MONOREPO ROOT, not apps/web: the web app depends on the
+# @neutra/commons workspace, so apps/web alone is not a self-contained context.
+#   docker build -f apps/web/Dockerfile -t neutra-web .
+FROM oven/bun:1.4.4-alpine AS builder
 WORKDIR /app
 
-# Install dependencies
-COPY package*.json ./
-RUN npm ci
+# Manifests first for a cache-friendly install. --ignore-scripts skips the API
+# workspace's prisma postinstall (the web build does not need a Prisma client).
+COPY package.json bun.lock ./
+COPY apps/web/package.json apps/web/package.json
+COPY packages/commons/package.json packages/commons/package.json
+RUN bun install --frozen-lockfile --ignore-scripts
 
-# Copy source code and build with Vite / TanStack Start
-COPY . ./
-RUN npm run build:start
+# @neutra/commons resolves to its gitignored dist/**, so it must be built before
+# the web app in a fresh context.
+COPY packages/commons packages/commons
+COPY apps/web apps/web
+RUN bun run --cwd packages/commons build
+RUN bun run --cwd apps/web build
 
 # ---------- Runtime image ----------
-FROM node:22-alpine
+FROM oven/bun:1.4.4-alpine
 WORKDIR /app
 
-# Copy the generated client + Node server entry from the builder
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/scripts/serve-start.mjs ./scripts/serve-start.mjs
-COPY --from=builder /app/scripts/serve-start-headers.mjs ./scripts/serve-start-headers.mjs
-COPY --from=builder /app/scripts/serve-start-request.mjs ./scripts/serve-start-request.mjs
-COPY --from=builder /app/package*.json ./
-RUN npm ci --omit=dev
+# Bun's workspace node_modules contain relative symlinks into /app/node_modules
+# and /app/packages/commons, so copy the whole layout verbatim.
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages/commons/node_modules ./packages/commons/node_modules
+COPY --from=builder /app/packages/commons/dist ./packages/commons/dist
+COPY --from=builder /app/packages/commons/package.json ./packages/commons/package.json
+COPY --from=builder /app/apps/web/node_modules ./apps/web/node_modules
+COPY --from=builder /app/apps/web/dist ./apps/web/dist
+COPY --from=builder /app/apps/web/public ./apps/web/public
+COPY --from=builder /app/apps/web/scripts ./apps/web/scripts
+COPY --from=builder /app/apps/web/package.json ./apps/web/package.json
 
 ENV NODE_ENV=production
 ENV PORT=3001
+# No hardcoded localhost: point at the composed API service. Override at runtime.
+ENV BACKEND_API_URL=http://api:3000/api
 
 EXPOSE 3001
 
-# Start the generated Node server on port 3001
-CMD ["npm", "run", "start:start"]
+WORKDIR /app/apps/web
+CMD ["bun", "scripts/serve-start.mjs"]

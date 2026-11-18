@@ -52,6 +52,24 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  web:
+    build:
+      # Web Dockerfile needs the monorepo root as context to resolve the
+      # @neutra/commons workspace dependency. Run with:
+      # docker compose -f apps/api/docker-compose.yml up
+      context: ../../
+      dockerfile: apps/web/Dockerfile
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=3001
+      - BACKEND_API_URL=${BACKEND_API_URL:-http://app:3000/api}
+    ports:
+      - "${WEB_PORT:-3001}:3001"
+    depends_on:
+      app:
+        condition: service_started
+    restart: unless-stopped
+
   db:
     image: postgres:16-alpine
     environment:
