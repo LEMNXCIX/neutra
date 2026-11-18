@@ -64,6 +64,10 @@ Phase 2 adds three web guards:
   7/7. Run it with `node scripts/verify-web-dod.mjs` **after committing** —
   its clean-tree check requires it.
 
+Both final DoD verifiers expect the sibling repos on disk: `verify-dod.mjs`
+compares `../neutra-frontend` against `scripts/.frontend-baseline.txt`, and
+`verify-web-dod.mjs` re-runs that gate as its last check.
+
 ## Web error-code drift guard (reattached in phase 2)
 
 In phase 1 the drift guard at
@@ -103,3 +107,15 @@ failures, and the DoD gate does not try to "fix" them:
    `docker compose config --quiet`. The CMS is excluded from the root build and
    no CMS service is started in CI, so these are placeholder values only — not
    real credentials.
+4. **Parity evidence is snapshot consistency, not a byte-for-byte comparison.**
+   The `apps/web/tests/parity` fixtures are deterministic mocks: the suite
+   checks snapshot consistency against `routes.json` (77 routes), not a real
+   Next-vs-Start byte-for-byte comparison. See `apps/web/README.md`.
+
+## Follow-ups
+
+- **Security debt (accepted WARN, not remediated here).** `npm.audit` in the
+  `ci` doctor profile reports **23 advisories (1 critical, 13 high)**. Per
+  accepted ruling T6 it stays WARN: no dependency is upgraded and no blocking
+  check is suppressed. Dependency remediation is a separate, tracked task —
+  recorded here so the WARN does not become invisible debt.

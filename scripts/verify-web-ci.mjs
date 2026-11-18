@@ -43,6 +43,12 @@ for (const [label, command] of REQUIRED_STEPS) {
     );
 }
 
+// --- Web contract duplication guard --------------------------------------
+check(
+    ci.includes("node scripts/verify-web-contracts.mjs"),
+    "CI.yml must run `node scripts/verify-web-contracts.mjs` (web contract duplication guard)",
+);
+
 // --- Tenant-header smoke --------------------------------------------------
 check(
     /x-tenant-slug/.test(ci) && /x-tenant-id/.test(ci),
@@ -138,7 +144,8 @@ if (failures.length > 0) {
 }
 
 console.log(
-    "PASS: verify-web-ci — web typecheck/test/build steps, tenant smoke " +
-        "(static artifact + non-static router path), Node 22 runtime, " +
-        "bun-only installer, CMS exclusion and build ordering all present",
+    "PASS: verify-web-ci — web typecheck/test/build steps, contract duplication " +
+        "guard, tenant smoke (static artifact + non-static router path), " +
+        "Node 22 runtime, bun-only installer, CMS exclusion and build " +
+        "ordering all present",
 );

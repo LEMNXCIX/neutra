@@ -3,10 +3,9 @@ import { ErrorCodes, type ErrorDetail } from "@neutra/commons";
 /**
  * User-facing copy for the backend's error codes.
  *
- * The backend publishes a stable machine-readable contract in
- * `api-neutra-v2/types/error-codes.ts` (94 codes across 11 domains) and its own
- * header says they are "organized by domain/category for better error handling
- * and client-side error display". This module is the client half of that: the
+ * The backend publishes a stable machine-readable contract as `ErrorCodes` in
+ * `@neutra/commons` (94 codes across 11 domains), the monorepo's single source
+ * of truth for wire contracts. This module is the client half of that: the
  * `code` and `field` are translated here, the `message` is not.
  *
  * `errors[].message` is written for developers and arrives in English, so it is
@@ -15,8 +14,9 @@ import { ErrorCodes, type ErrorDetail } from "@neutra/commons";
  * Spanish fallback is used instead, so the only way an English string reaches
  * the screen is if a caller puts one there on purpose.
  *
- * `error-codes.test.ts` reads the backend enum and fails when a published code
- * resolves to nothing, so adding a code there is a test failure here.
+ * `error-codes.test.ts` reads `ErrorCodes` from `@neutra/commons` and fails when
+ * a published code resolves to nothing, so adding a code there is a test
+ * failure here.
  */
 
 /** Specific codes where the domain fallback would be too vague to act on. */

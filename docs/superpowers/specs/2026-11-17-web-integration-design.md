@@ -113,7 +113,7 @@ El front **importa los schemas y sus tipos inferidos** (`z.infer`). No se agrega
 - [ ] 0 definiciones duplicadas de envelope/`ErrorDetail`/códigos/enums/DTOs de contrato en `apps/web/src` (verificado por grep).
 - [ ] Test de drift importa `ErrorCodes` desde `@neutra/commons` y **falla** si se agrega un código sin traducir (test negativo).
 - [ ] `apps/web`: vitest en verde (325 tests según el spec del front; el número exacto se toma del repo), `typecheck` y `build` en verde.
-- [ ] Paridad byte-a-byte de los 77 Server Routes frente a las fixtures capturadas; smoke Docker con `x-tenant-slug`/`x-tenant-id`.
+- [ ] Consistencia de snapshot de los 77 Server Routes contra `routes.json` (77 rutas) frente a las fixtures capturadas (mocks deterministas, no una comparación byte-a-byte Next-vs-Start); smoke Docker con `x-tenant-slug`/`x-tenant-id`.
 - [ ] Doctor: `node.contract`, `package.lock` y `npm.audit` en verde en perfil `ci`; R1–R11 sin cambios.
 - [ ] DoD de la fase 1 sigue en verde: 76 suites / 757 tests de la API, `commons:check`, `check:arch`, `verify:production`, `verify-dod.mjs` 7/7.
 - [ ] Ningún archivo de `api-neutra-v2` ni de `neutra-frontend` (repos fuente) modificado; sin push salvo autorización.

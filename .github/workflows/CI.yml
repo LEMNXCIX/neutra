@@ -31,8 +31,9 @@ jobs:
       # job, on the same footing as JWT_SECRET above.
       SUPER_ADMIN_PASSWORD: ci-super-admin-password
       # The web server resolves its backend per request and refuses to boot a
-      # request without this. A throwaway value is enough: the CI smoke hits a
-      # static asset and the parity suite mocks every backend call.
+      # request without this. A throwaway value is enough: the CI smoke hits the
+      # non-static router path /api/revalidate/events plus a separate static
+      # /icon.svg artifact check, and the parity suite mocks every backend call.
       BACKEND_API_URL: http://localhost:4001/api
       # docker-compose.prod.yml declares these five with `:?`, and the API
       # doctor's blocking `docker.compose` check validates both compose files.
@@ -87,7 +88,7 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: 1.4.4
 
       # setup-node cannot cache Bun's store (only npm/yarn/pnpm). Cache it
       # explicitly with actions/cache, keyed on the single root bun.lock.
@@ -135,6 +136,11 @@ jobs:
       # architecture regression fails fast with a precise message.
       - name: Check shared contracts drift
         run: bun run commons:check
+
+      # Fail fast if a wire contract was redefined inside apps/web/src instead
+      # of being imported from @neutra/commons (same guard as verify-web-dod).
+      - name: Check web contract duplication
+        run: node scripts/verify-web-contracts.mjs
 
       - name: Check architecture boundaries
         run: bun run check:arch
