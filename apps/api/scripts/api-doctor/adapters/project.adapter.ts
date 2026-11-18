@@ -1,5 +1,5 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join, relative, resolve } from "node:path";
 import type { CheckRunResult, DoctorContext } from "../domain/check-result";
 
 type JsonRecord = Record<string, unknown>;
@@ -30,6 +30,58 @@ function readText(filePath: string): string | null {
     } catch {
         return null;
     }
+}
+
+/**
+ * The doctor runs from apps/api, but CI.yml and bun.lock live at the monorepo
+ * root. Start at resolve(rootDir, "..") and walk up until the shared file is
+ * found, so the check does not depend on how deep the workspace is nested.
+ */
+function findFromMonorepo(rootDir: string, file: string): string | null {
+    let current = resolve(rootDir, "..");
+    while (true) {
+        const candidate = join(current, file);
+        if (existsSync(candidate)) return candidate;
+        const parent = dirname(current);
+        if (parent === current) return null;
+        current = parent;
+    }
+}
+
+/** Single-repo fixtures keep working through the fallback to rootDir. */
+function resolveFromMonorepo(rootDir: string, file: string): string {
+    return findFromMonorepo(rootDir, file) ?? join(rootDir, file);
+}
+
+/** Bun writes trailing commas into bun.lock; drop them outside string values. */
+function parseBunLock(content: string): unknown {
+    let cleaned = "";
+    let inString = false;
+    let escaped = false;
+    for (let index = 0; index < content.length; index += 1) {
+        const char = content[index];
+        if (inString) {
+            cleaned += char;
+            if (escaped) escaped = false;
+            else if (char === "\\") escaped = true;
+            else if (char === '"') inString = false;
+            continue;
+        }
+        if (char === '"') {
+            inString = true;
+            cleaned += char;
+            continue;
+        }
+        if (char === ",") {
+            let next = index + 1;
+            while (next < content.length && /\s/.test(content[next])) {
+                next += 1;
+            }
+            if (content[next] === "}" || content[next] === "]") continue;
+        }
+        cleaned += char;
+    }
+    return JSON.parse(cleaned) as unknown;
 }
 
 function pass(message: string, details?: string[]): CheckRunResult {
@@ -84,7 +136,10 @@ export function nodeVersionSatisfiesMinimum(
     minimum: NodeMinimumVersion,
 ): boolean {
     const version = parseActualVersion(actual);
-    if (!version || version.major !== minimum.major) return false;
+    if (!version) return false;
+    if (version.major !== minimum.major) {
+        return version.major > minimum.major;
+    }
     if (version.minor !== minimum.minor) {
         return version.minor > minimum.minor;
     }
@@ -167,6 +222,7 @@ export async function checkNodeContract(
         label: string;
         file: string;
         extract: (content: string) => number[];
+        atMonorepoRoot?: boolean;
     }> = [
         {
             label: "Dockerfile.dev",
@@ -182,6 +238,7 @@ export async function checkNodeContract(
             label: "CI.yml",
             file: ".github/workflows/CI.yml",
             extract: ciNodeMajors,
+            atMonorepoRoot: true,
         },
         {
             label: "app.yaml",
@@ -191,7 +248,10 @@ export async function checkNodeContract(
     ];
 
     for (const declaration of declarations) {
-        const content = readText(join(context.rootDir, declaration.file));
+        const filePath = declaration.atMonorepoRoot
+            ? resolveFromMonorepo(context.rootDir, declaration.file)
+            : join(context.rootDir, declaration.file);
+        const content = readText(filePath);
         if (content === null) {
             mismatches.push(`${declaration.label} could not be read`);
             continue;
@@ -210,35 +270,31 @@ export async function checkNodeContract(
         : fail("Node runtime contract is inconsistent", mismatches);
 }
 
-/** Compare package.json with the lockfile root metadata and dependency maps. */
-export async function checkPackageLock(
-    context: DoctorContext,
-): Promise<CheckRunResult> {
-    const packageData = readJson(join(context.rootDir, "package.json"));
-    const lockData = readJson(join(context.rootDir, "package-lock.json"));
-    const packageRecord = packageData.ok ? asRecord(packageData.value) : null;
-    const lockRecord = lockData.ok ? asRecord(lockData.value) : null;
-    const packages = lockRecord ? asRecord(lockRecord.packages) : null;
-    const root = packages ? asRecord(packages[""]) : null;
-    if (!packageRecord || !root) {
-        return fail("Package and lockfile root metadata could not be read");
-    }
+const LOCK_METADATA_FIELDS = ["name", "version", "license", "engines"];
+const LOCK_DEPENDENCY_FIELDS = [
+    "dependencies",
+    "devDependencies",
+    "optionalDependencies",
+    "peerDependencies",
+];
 
+function compareMetadata(
+    packageRecord: JsonRecord,
+    lockRoot: JsonRecord,
+    skipMissing: boolean,
+): CheckRunResult {
     const mismatches: string[] = [];
-    for (const field of ["name", "version", "license", "engines"]) {
-        if (stableJson(packageRecord[field]) !== stableJson(root[field])) {
+    for (const field of LOCK_METADATA_FIELDS) {
+        if (skipMissing && lockRoot[field] === undefined) continue;
+        if (stableJson(packageRecord[field]) !== stableJson(lockRoot[field])) {
             mismatches.push(`${field} metadata mismatch`);
         }
     }
-
-    for (const field of [
-        "dependencies",
-        "devDependencies",
-        "optionalDependencies",
-        "peerDependencies",
-    ]) {
+    for (const field of LOCK_DEPENDENCY_FIELDS) {
+        if (skipMissing && lockRoot[field] === undefined) continue;
         if (
-            dependencyMap(packageRecord[field]) !== dependencyMap(root[field])
+            dependencyMap(packageRecord[field]) !==
+            dependencyMap(lockRoot[field])
         ) {
             mismatches.push(`${field} map mismatch`);
         }
@@ -247,6 +303,71 @@ export async function checkPackageLock(
     return mismatches.length === 0
         ? pass("Package and lockfile metadata are consistent")
         : fail("Package and lockfile metadata are inconsistent", mismatches);
+}
+
+function compareBunLock(
+    packageRecord: JsonRecord,
+    rootDir: string,
+    lockRootDir: string,
+    content: string,
+): CheckRunResult {
+    let parsed: unknown;
+    try {
+        parsed = parseBunLock(content);
+    } catch {
+        return fail("Bun lockfile root metadata could not be read");
+    }
+    const lockRecord = asRecord(parsed);
+    const workspaces = lockRecord ? asRecord(lockRecord.workspaces) : null;
+    if (!workspaces) {
+        return fail("Bun lockfile workspaces could not be read");
+    }
+
+    const workspacePath = relative(lockRootDir, rootDir)
+        .split(/[\\/]/)
+        .join("/");
+    const workspace = asRecord(workspaces[workspacePath]);
+    if (!workspace) {
+        return fail("Bun lockfile has no entry for this workspace");
+    }
+
+    // bun.lock does not record license or engines for a workspace, so only
+    // compare the fields it actually stores instead of demanding equality
+    // against absent values.
+    return compareMetadata(packageRecord, workspace, true);
+}
+
+/** Compare package.json with the lockfile root metadata and dependency maps. */
+export async function checkPackageLock(
+    context: DoctorContext,
+): Promise<CheckRunResult> {
+    const packageData = readJson(join(context.rootDir, "package.json"));
+    const packageRecord = packageData.ok ? asRecord(packageData.value) : null;
+    if (!packageRecord) {
+        return fail("Package and lockfile root metadata could not be read");
+    }
+
+    const bunLockPath = findFromMonorepo(context.rootDir, "bun.lock");
+    if (bunLockPath !== null) {
+        const bunLock = readText(bunLockPath);
+        if (bunLock !== null) {
+            return compareBunLock(
+                packageRecord,
+                context.rootDir,
+                dirname(bunLockPath),
+                bunLock,
+            );
+        }
+    }
+
+    const lockData = readJson(join(context.rootDir, "package-lock.json"));
+    const lockRecord = lockData.ok ? asRecord(lockData.value) : null;
+    const packages = lockRecord ? asRecord(lockRecord.packages) : null;
+    const root = packages ? asRecord(packages[""]) : null;
+    if (!root) {
+        return fail("Package and lockfile root metadata could not be read");
+    }
+    return compareMetadata(packageRecord, root, false);
 }
 
 /** Check only key presence; environment values are never read or returned. */

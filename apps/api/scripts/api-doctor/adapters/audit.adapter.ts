@@ -27,16 +27,32 @@ function numberValue(value: unknown): number | null {
     return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-function parseAudit(output: string): AuditSummary | null {
-    let parsed: unknown;
-    try {
-        parsed = JSON.parse(output) as unknown;
-    } catch {
-        return null;
+/**
+ * `bun audit --json` emits a flat map of package name -> advisory records
+ * carrying a `severity`, with no metadata block and no fixAvailable field.
+ */
+function parseBunAudit(root: JsonRecord): AuditSummary | null {
+    let total = 0;
+    let high = 0;
+    let critical = 0;
+    for (const advisories of Object.values(root)) {
+        if (!Array.isArray(advisories)) return null;
+        for (const advisory of advisories) {
+            const record = asRecord(advisory);
+            if (!record || typeof record.severity !== "string") return null;
+            total += 1;
+            if (record.severity === "high") high += 1;
+            if (record.severity === "critical") critical += 1;
+        }
     }
+    // Bun does not expose fix availability, so no non-breaking fix can be
+    // asserted: findings stay at the original "without a non-breaking fix"
+    // severity instead of being silently downgraded or promoted.
+    return { total, high, critical, nonBreakingFixes: 0 };
+}
 
-    const root = asRecord(parsed);
-    const metadata = asRecord(root?.metadata);
+function parseNpmAudit(root: JsonRecord): AuditSummary | null {
+    const metadata = asRecord(root.metadata);
     const counts = asRecord(metadata?.vulnerabilities);
     if (!counts) return null;
 
@@ -62,6 +78,21 @@ function parseAudit(output: string): AuditSummary | null {
     }
 
     return { total, high, critical, nonBreakingFixes };
+}
+
+function parseAudit(output: string): AuditSummary | null {
+    let parsed: unknown;
+    try {
+        parsed = JSON.parse(output) as unknown;
+    } catch {
+        return null;
+    }
+    const root = asRecord(parsed);
+    if (!root) return null;
+    if (root.metadata !== undefined || root.vulnerabilities !== undefined) {
+        return parseNpmAudit(root);
+    }
+    return parseBunAudit(root);
 }
 
 function networkFailure(result: CommandResult): boolean {
@@ -104,24 +135,22 @@ function auditDetails(summary: AuditSummary): string[] {
     ];
 }
 
-/** Run npm audit without ever exposing its payload or applying a fix. */
+/** Run bun audit without ever exposing its payload or applying a fix. */
 export function createNpmAuditCheck(
     runner: CommandRunner = runCommand,
 ): (context: DoctorContext) => Promise<CheckRunResult> {
     return async (context) => {
         try {
-            const result = await runner(
-                "npm",
-                ["audit", "--json", "--audit-level=high"],
-                {
-                    cwd: context.rootDir,
-                    timeoutMs: AUDIT_TIMEOUT_MS,
-                },
-            );
+            const result = await runner("bun", ["audit", "--json"], {
+                cwd: context.rootDir,
+                timeoutMs: AUDIT_TIMEOUT_MS,
+            });
+            // A non-zero exit code is expected when advisories exist; only a
+            // failure that prevents verification is blocking.
             if (networkFailure(result)) {
                 return {
-                    status: "SKIP",
-                    message: "npm audit could not reach the registry",
+                    status: "FAIL",
+                    message: "bun audit could not reach the registry (blocked)",
                 };
             }
 
@@ -129,33 +158,33 @@ export function createNpmAuditCheck(
             if (!summary) {
                 return {
                     status: "FAIL",
-                    message: "npm audit output could not be verified",
+                    message: "bun audit output could not be verified (blocked)",
                 };
             }
             if (summary.total === 0) {
                 return {
                     status: "PASS",
-                    message: "npm audit found no vulnerabilities",
+                    message: "bun audit found no vulnerabilities",
                     details: auditDetails(summary),
                 };
             }
             if (summary.nonBreakingFixes > 0) {
                 return {
                     status: "FAIL",
-                    message: "npm audit found fixable vulnerabilities",
+                    message: "bun audit found fixable vulnerabilities",
                     details: auditDetails(summary),
                 };
             }
             return {
                 status: "WARN",
                 message:
-                    "npm audit found vulnerabilities without a non-breaking fix",
+                    "bun audit found vulnerabilities without a non-breaking fix",
                 details: auditDetails(summary),
             };
         } catch {
             return {
-                status: "SKIP",
-                message: "npm audit could not be executed",
+                status: "FAIL",
+                message: "bun audit could not be executed (blocked)",
             };
         }
     };

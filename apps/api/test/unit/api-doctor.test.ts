@@ -394,7 +394,8 @@ describe("api-doctor adapters", () => {
                 stderr: "request to registry.npmjs.org failed",
             });
         const unavailable = await createNpmAuditCheck(networkRunner)(context());
-        expect(unavailable.status).toBe("SKIP");
+        // An unverifiable audit is blocking in every profile, not a skip.
+        expect(unavailable.status).toBe("FAIL");
     });
 
     it("warns for breaking-only or unfixable audit findings", async () => {
