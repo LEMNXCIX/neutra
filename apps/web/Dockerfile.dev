@@ -1,6 +1,7 @@
 # Development image. Same root build context as apps/web/Dockerfile:
 #   docker build -f apps/web/Dockerfile.dev -t neutra-web-dev .
-FROM oven/bun:1.4.4-alpine
+# Bun is only the installer/script tool; the runtime stage is Node 22 (D7).
+FROM oven/bun:1.4.4-alpine AS installer
 WORKDIR /app
 
 COPY package.json bun.lock ./
@@ -12,6 +13,16 @@ COPY packages/commons packages/commons
 COPY apps/web apps/web
 RUN bun run --cwd packages/commons build
 
+# ---------- Runtime image ----------
+FROM node:22-alpine
+WORKDIR /app
+
+COPY --from=installer /app/node_modules ./node_modules
+COPY --from=installer /app/packages/commons/node_modules ./packages/commons/node_modules
+COPY --from=installer /app/packages/commons/dist ./packages/commons/dist
+COPY --from=installer /app/packages/commons/package.json ./packages/commons/package.json
+COPY --from=installer /app/apps/web ./apps/web
+
 ENV NODE_ENV=development
 ENV PORT=3001
 # The composed API service is `app`; override for a locally running backend.
@@ -21,4 +32,4 @@ ENV BACKEND_API_URL=http://app:3000/api
 EXPOSE 3001
 
 WORKDIR /app/apps/web
-CMD ["bun", "run", "dev:start"]
+CMD ["npm", "run", "dev:start"]
