@@ -170,8 +170,12 @@ check("neutra-frontend status matches scripts/.frontend-baseline.txt", () => {
   const baselinePath = join(root, "scripts", ".frontend-baseline.txt");
   assert(existsSync(baselinePath), "missing scripts/.frontend-baseline.txt (Task 2)");
   const baseline = readFileSync(baselinePath, "utf8").replace(/\r\n/g, "\n").trimEnd();
-  const frontendDir = join(root, "..", "neutra-frontend");
-  assert(existsSync(frontendDir), `frontend sibling repo not found at ${frontendDir}`);
+  const candidates = [
+    join(root, "..", "neutra-frontend"),
+    "/mnt/c/Users/leonardo/Repositories/neutra-frontend",
+  ];
+  const frontendDir = candidates.find((p) => existsSync(join(p, ".git")));
+  assert(frontendDir, `frontend sibling repo not found in ${candidates.join(", ")}`);
   const actual = git(["-C", frontendDir, "status", "--porcelain"]).replace(/\r\n/g, "\n").trimEnd();
   assert(
     actual === baseline,
