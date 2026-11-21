@@ -1,5 +1,22 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalEnv": [
+    "DATABASE_URL",
+    "JWT_SECRET",
+    "SESSION_SECRET",
+    "REDIS_HOST",
+    "REDIS_PORT",
+    "POSTGRES_USER",
+    "POSTGRES_PASSWORD",
+    "POSTGRES_DB",
+    "SUPER_ADMIN_PASSWORD",
+    "BACKEND_API_URL",
+    "CMS_APP_KEYS",
+    "CMS_API_TOKEN_SALT",
+    "CMS_ADMIN_JWT_SECRET",
+    "CMS_JWT_SECRET",
+    "CMS_ENCRYPTION_KEY"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
