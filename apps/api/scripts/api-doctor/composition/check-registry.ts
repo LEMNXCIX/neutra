@@ -136,11 +136,14 @@ export function createCheckRegistry(
             blockingIn: GATED_PROFILES,
             run: createPrismaValidateCheck(runner),
         },
+        // Use bun's script runner rather than `npx --no-install tsc`: on the
+        // CI runner (Node 22 / npm 10) npx cannot resolve the `tsc` bin from
+        // the workspace and fails even though `bun run typecheck` succeeds.
         commandCheck(
             "typecheck",
             "static",
-            "npx",
-            ["--no-install", "tsc", "--noEmit"],
+            "bun",
+            ["run", "typecheck"],
             runner,
             ALL_PROFILES,
             GATED_PROFILES,
