@@ -73,16 +73,23 @@ describe("commons enums are the Zod SSOT", () => {
 		});
 	});
 
-	it("OrderStatus accepts the four Spanish states and rejects anything else", () => {
-		for (const value of ["PENDIENTE", "PAGADO", "ENVIADO", "ENTREGADO"]) {
+	it("OrderStatus accepts the five Spanish states and rejects anything else", () => {
+		for (const value of [
+			"PENDIENTE",
+			"PAGADO",
+			"ENVIADO",
+			"ENTREGADO",
+			"CANCELADO",
+		]) {
 			expect(OrderStatusSchema.safeParse(value).success).toBe(true);
 		}
-		expect(OrderStatusSchema.safeParse("CANCELADO").success).toBe(false);
+		expect(OrderStatusSchema.safeParse("BOGUS").success).toBe(false);
 		expect(OrderStatus).toEqual({
 			PENDIENTE: "PENDIENTE",
 			PAGADO: "PAGADO",
 			ENVIADO: "ENVIADO",
 			ENTREGADO: "ENTREGADO",
+			CANCELADO: "CANCELADO",
 		});
 	});
 

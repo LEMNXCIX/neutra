@@ -7,6 +7,7 @@ export class GetOrderStatusesUseCase {
             { value: "PAGADO", label: "Pagado" },
             { value: "ENVIADO", label: "Enviado" },
             { value: "ENTREGADO", label: "Entregado" },
+            { value: "CANCELADO", label: "Cancelado" },
         ];
         return Success(statuses, "Order statuses retrieved successfully");
     }

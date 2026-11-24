@@ -23,6 +23,7 @@ export class ChangeOrderStatusUseCase {
             "PAGADO",
             "ENVIADO",
             "ENTREGADO",
+            "CANCELADO",
         ];
         if (!validStatuses.includes(status as OrderStatus)) {
             throw new InvalidStateError(

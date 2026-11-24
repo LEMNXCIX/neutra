@@ -7,10 +7,11 @@ export function canTransitionTo(
     next: OrderStatus,
 ): boolean {
     const transitions: Record<OrderStatus, OrderStatus[]> = {
-        PENDIENTE: ["PAGADO"],
+        PENDIENTE: ["PAGADO", "CANCELADO"],
         PAGADO: ["ENVIADO"],
         ENVIADO: ["ENTREGADO"],
         ENTREGADO: [],
+        CANCELADO: [],
     };
     return transitions[current]?.includes(next) ?? false;
 }

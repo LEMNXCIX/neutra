@@ -54,6 +54,7 @@ const ORDER_STATUSES: readonly OrderStatus[] = [
     "PAGADO",
     "ENVIADO",
     "ENTREGADO",
+    "CANCELADO",
 ];
 
 function isOrderStatus(value: string): value is OrderStatus {
@@ -496,6 +497,36 @@ export class PrismaOrderRepository implements IOrderRepository {
                     },
                 },
             });
+
+            // Cancel a pending order: the CAS above is the idempotency guard —
+            // a second/concurrent cancel returns null before reaching here, so
+            // stock and coupon usage are restored exactly once. OrderItem has
+            // no tenantId column, so tenant scoping goes through the order.
+            if (
+                order &&
+                data.expectedStatus === "PENDIENTE" &&
+                data.status === "CANCELADO"
+            ) {
+                const items = await tx.orderItem.findMany({
+                    where: { orderId: id, order: { is: { tenantId } } },
+                });
+                for (const item of items) {
+                    await tx.product.updateMany({
+                        where: { id: item.productId, tenantId },
+                        data: { stock: { increment: item.amount } },
+                    });
+                }
+                if (order.couponId) {
+                    await tx.coupon.updateMany({
+                        where: {
+                            id: order.couponId,
+                            tenantId,
+                            usageCount: { gt: 0 },
+                        },
+                        data: { usageCount: { decrement: 1 } },
+                    });
+                }
+            }
 
             if (order && data.status === "ENTREGADO" && data.qualifyLoyalty) {
                 const loyaltyEnabled =

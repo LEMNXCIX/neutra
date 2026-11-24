@@ -6,6 +6,7 @@ export const OrderStatusSchema = z.enum({
   PAGADO: "PAGADO",
   ENVIADO: "ENVIADO",
   ENTREGADO: "ENTREGADO",
+  CANCELADO: "CANCELADO",
 });
 
 export const OrderStatus = OrderStatusSchema.enum;
