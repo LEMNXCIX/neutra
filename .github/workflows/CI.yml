@@ -150,6 +150,12 @@ jobs:
       - name: Verify availability DoD acceptance criteria
         run: node scripts/verify-availability-dod.mjs
 
+      # Same clean-tree requirement as the gate above: run it before route
+      # generation (web typecheck's route:generate writes routeTree.gen.ts) so
+      # no generated files are counted as drift by check 8.
+      - name: Verify debt remediation acceptance criteria
+        run: node scripts/verify-debt-remediation.mjs
+
       - name: Check architecture boundaries
         run: bun run check:arch
 
