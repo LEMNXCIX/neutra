@@ -1,3 +1,4 @@
+import { type AcquireHoldRequest, holdKey } from "@neutra/commons";
 import { apiClient as api } from "@/lib/api-client";
 
 export type AppointmentStatus =
@@ -125,6 +126,39 @@ export interface CreateAppointmentData {
     startTime: Date | string;
     notes?: string;
     couponCode?: string;
+    /** Canonical hold acquired for this slot before confirming the booking. */
+    holdKey?: string;
+}
+
+/**
+ * Slot identity for an appointment hold. The API's slot lock is keyed by
+ * (tenant, staff, start time), so the resource id mirrors exactly that — a
+ * service change never invalidates the lock on the same professional's time.
+ */
+export function appointmentSlotResourceId(
+    staffId: string,
+    date: string,
+    time: string,
+): string {
+    return `${staffId}:${date}:${time}`;
+}
+
+export function appointmentSlotHoldKey(
+    tenantId: string,
+    staffId: string,
+    date: string,
+    time: string,
+): string {
+    return holdKey(
+        "appointment",
+        tenantId,
+        appointmentSlotResourceId(staffId, date, time),
+    );
+}
+
+export interface AcquireHoldResult {
+    key: string;
+    expiresAt: string;
 }
 
 class BookingService {
@@ -234,6 +268,22 @@ class BookingService {
         });
 
         return api<string[]>(`/appointments/availability?${params.toString()}`);
+    }
+
+    /** Acquire a short-lived UX hold on a slot before confirming a booking. */
+    async acquireHold(request: AcquireHoldRequest): Promise<AcquireHoldResult> {
+        return api<AcquireHoldResult>("/holds", {
+            method: "POST",
+            body: JSON.stringify(request),
+        });
+    }
+
+    /** Release a hold owned by this browser (no-op for expired/foreign holds). */
+    async releaseHold(key: string): Promise<{ released: boolean }> {
+        return api<{ released: boolean }>(
+            `/holds/${encodeURIComponent(key)}`,
+            { method: "DELETE" },
+        );
     }
 
     /**

@@ -15,10 +15,10 @@ import {
 } from "lucide-react";
 import type React from "react";
 import {
-    useCallback,
     useEffect,
     useMemo,
     useReducer,
+    useRef,
     useState,
     useSyncExternalStore,
 } from "react";
@@ -39,12 +39,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { useAvailability } from "@/hooks/use-availability";
 import { useFeatures } from "@/hooks/useFeatures";
 import { filterFutureSlots, isFutureSlot } from "@/lib/appointment-time";
+import { onAvailabilityEvent } from "@/lib/availability-events";
 import { reportError } from "@/lib/error-reporting";
 import { useRouter } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import {
+    appointmentSlotHoldKey,
+    appointmentSlotResourceId,
     bookingService,
     type CreateAppointmentData,
     type Service,
@@ -52,6 +56,7 @@ import {
 } from "@/services/booking.service";
 import { couponsService } from "@/services/coupons.service";
 import { useAuthStore } from "@/store/auth-store";
+import { useTenantStore } from "@/store/tenant-store";
 import type { CouponValidationResult } from "@/types/coupon.types";
 
 interface BookingWizardProps {
@@ -69,8 +74,6 @@ type BookingWizardState = {
     notes: string;
     submitting: boolean;
     error: string | null;
-    availableSlots: string[];
-    loadingAvailability: boolean;
     couponCode: string;
     couponResult: CouponValidationResult | null;
     validatingCoupon: boolean;
@@ -86,8 +89,6 @@ type BookingWizardAction =
     | { type: "SET_NOTES"; payload: string }
     | { type: "SET_SUBMITTING"; payload: boolean }
     | { type: "SET_ERROR"; payload: string | null }
-    | { type: "SET_AVAILABLE_SLOTS"; payload: string[] }
-    | { type: "SET_LOADING_AVAILABILITY"; payload: boolean }
     | { type: "SET_COUPON_CODE"; payload: string }
     | { type: "SET_COUPON_RESULT"; payload: CouponValidationResult | null }
     | { type: "SET_VALIDATING_COUPON"; payload: boolean }
@@ -101,24 +102,18 @@ function bookingWizardReducer(
         case "SET_STEP":
             return { ...state, step: action.payload };
         case "SET_SELECTED_SERVICE":
-            return {
-                ...state,
-                selectedService: action.payload,
-                availableSlots: [],
-            };
+            return { ...state, selectedService: action.payload };
         case "SET_SELECTED_STAFF":
             return {
                 ...state,
                 selectedStaff: action.payload,
                 selectedTime: "",
-                availableSlots: [],
             };
         case "SET_SELECTED_DATE":
             return {
                 ...state,
                 selectedDate: action.payload,
                 selectedTime: "",
-                availableSlots: [],
             };
         case "SET_SELECTED_TIME":
             return { ...state, selectedTime: action.payload };
@@ -128,10 +123,6 @@ function bookingWizardReducer(
             return { ...state, submitting: action.payload };
         case "SET_ERROR":
             return { ...state, error: action.payload };
-        case "SET_AVAILABLE_SLOTS":
-            return { ...state, availableSlots: action.payload };
-        case "SET_LOADING_AVAILABILITY":
-            return { ...state, loadingAvailability: action.payload };
         case "SET_COUPON_CODE":
             return { ...state, couponCode: action.payload };
         case "SET_COUPON_RESULT":
@@ -153,6 +144,24 @@ const BOOKING_STEPS = [
 ];
 
 const emptySubscribe = () => () => {};
+
+/** The API signals a lost race with HTTP 409 (either a taken slot or a hold
+ *  that expired). Reading both status spellings keeps BFF and direct errors
+ *  equivalent; the stable error codes cover envelope-only failures. */
+function isConflictError(error: unknown): boolean {
+    if (!error || typeof error !== "object") return false;
+    const candidate = error as {
+        statusCode?: number;
+        status?: number;
+        code?: string;
+    };
+    return (
+        candidate.statusCode === 409 ||
+        candidate.status === 409 ||
+        candidate.code === "RESOURCE_INVALID_STATE" ||
+        candidate.code === "HOLD_CONFLICT"
+    );
+}
 
 type DispatchFn = (action: BookingWizardAction) => void;
 
@@ -372,6 +381,9 @@ interface ScheduleStepProps {
     currentInstant: Date;
     loadingAvailability: boolean;
     selectedStaff: Staff | null;
+    heldByOther: ReadonlySet<string>;
+    myHoldTime: string | null;
+    onSelectSlot: (time: string) => void;
     dispatch: DispatchFn;
 }
 
@@ -383,6 +395,9 @@ function ScheduleStep({
     currentInstant,
     loadingAvailability,
     selectedStaff,
+    heldByOther,
+    myHoldTime,
+    onSelectSlot,
     dispatch,
 }: ScheduleStepProps) {
     const workingDays = useMemo(
@@ -467,6 +482,9 @@ function ScheduleStep({
                             ) : (
                                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                                     {selectableSlots.map((time) => {
+                                        const isHeldByOther =
+                                            heldByOther.has(time);
+                                        const isMine = myHoldTime === time;
                                         return (
                                             <Button
                                                 key={time}
@@ -475,20 +493,40 @@ function ScheduleStep({
                                                         ? "default"
                                                         : "outline"
                                                 }
+                                                disabled={isHeldByOther}
+                                                data-slot-state={
+                                                    isHeldByOther
+                                                        ? "held-by-other"
+                                                        : isMine
+                                                          ? "mine"
+                                                          : "available"
+                                                }
                                                 onClick={() =>
-                                                    dispatch({
-                                                        type: "SET_SELECTED_TIME",
-                                                        payload: time,
-                                                    })
+                                                    onSelectSlot(time)
                                                 }
                                                 className={cn(
                                                     "h-10 rounded-lg text-xs font-semibold transition-[color,background-color,border-color,box-shadow,opacity,transform]",
                                                     selectedTime === time
                                                         ? "shadow-md scale-105"
                                                         : "border-border/50 hover:border-primary/30",
+                                                    isHeldByOther &&
+                                                        "opacity-60 cursor-not-allowed",
                                                 )}
                                             >
-                                                {time}
+                                                <span className="block">
+                                                    {time}
+                                                </span>
+                                                {isHeldByOther && (
+                                                    <span className="block text-[9px] font-medium leading-tight text-rose-500">
+                                                        alguien está reservando
+                                                        este horario
+                                                    </span>
+                                                )}
+                                                {isMine && (
+                                                    <span className="block text-[9px] font-medium leading-tight">
+                                                        Tu horario
+                                                    </span>
+                                                )}
                                             </Button>
                                         );
                                     })}
@@ -764,6 +802,7 @@ export function BookingWizard({
     const router = useRouter();
     const user = useAuthStore((state) => state.user);
     const { isFeatureEnabled } = useFeatures();
+    const tenantId = useTenantStore((state) => state.tenantId);
 
     const [state, dispatch] = useReducer(bookingWizardReducer, {
         step:
@@ -779,8 +818,6 @@ export function BookingWizard({
         notes: "",
         submitting: false,
         error: null,
-        availableSlots: [],
-        loadingAvailability: false,
         couponCode: "",
         couponResult: null,
         validatingCoupon: false,
@@ -795,8 +832,6 @@ export function BookingWizard({
         notes,
         submitting,
         error,
-        availableSlots,
-        loadingAvailability,
         couponCode,
         couponResult,
         validatingCoupon,
@@ -820,31 +855,128 @@ export function BookingWizard({
         }
     }, [currentInstant, dispatch, selectedDate, selectedTime]);
 
-    const checkAvailability = useCallback(async () => {
-        if (
-            !state.selectedStaff ||
-            !state.selectedDate ||
-            !state.selectedService
-        )
-            return;
-        try {
-            dispatch({ type: "SET_LOADING_AVAILABILITY", payload: true });
-            const slots = await bookingService.checkAvailability(
-                state.selectedStaff.id,
-                state.selectedService.id,
-                state.selectedDate,
-            );
-            dispatch({ type: "SET_AVAILABLE_SLOTS", payload: slots });
-        } catch (err) {
-            console.error("Error al verificar disponibilidad", err);
-        } finally {
-            dispatch({ type: "SET_LOADING_AVAILABILITY", payload: false });
-        }
-    }, [state.selectedStaff, state.selectedDate, state.selectedService]);
+    const availability = useAvailability({
+        staffId: selectedStaff?.id,
+        serviceId: selectedService?.id,
+        date: selectedDate,
+    });
+    const { slots: availableSlots, isLoading: loadingAvailability } =
+        availability;
+
+    const [myHold, setMyHold] = useState<{
+        time: string;
+        key: string;
+    } | null>(null);
+    const [heldByOther, setHeldByOther] = useState<ReadonlySet<string>>(
+        () => new Set(),
+    );
+    // The API publishes `hold.acquired` before replying to the POST, so the
+    // SSE event can reach us before our promise resolves. Remember own keys
+    // up-front to keep our own hold out of the "held by other" state.
+    const ownHoldKeysRef = useRef<Set<string>>(new Set());
+    const myHoldRef = useRef<typeof myHold>(null);
+    const selectionRef = useRef<string | null>(null);
 
     useEffect(() => {
-        checkAvailability();
-    }, [checkAvailability]);
+        myHoldRef.current = myHold;
+    }, [myHold]);
+
+    // A slot id embeds staff/date, so hold state cannot survive a change of
+    // either one. Release the previous hold too: otherwise re-picking the same
+    // slot inside its TTL would lose our own NX race and look foreign.
+    useEffect(() => {
+        const selection = `${selectedStaff?.id ?? ""}|${selectedDate}`;
+        if (selectionRef.current === selection) return;
+        selectionRef.current = selection;
+        const previous = myHoldRef.current;
+        if (previous) {
+            ownHoldKeysRef.current.delete(previous.key);
+            void bookingService.releaseHold(previous.key).catch(() => {});
+        }
+        myHoldRef.current = null;
+        ownHoldKeysRef.current.clear();
+        setMyHold(null);
+        setHeldByOther(new Set());
+    }, [selectedStaff?.id, selectedDate]);
+
+    useEffect(() => {
+        if (!tenantId || !selectedStaff || !selectedDate) return;
+        return onAvailabilityEvent((event) => {
+            if (event.tenantId !== tenantId) return;
+            const time = availableSlots.find(
+                (slot) =>
+                    appointmentSlotHoldKey(
+                        tenantId,
+                        selectedStaff.id,
+                        selectedDate,
+                        slot,
+                    ) === event.resourceKey,
+            );
+            if (!time) return;
+
+            if (event.type === "hold.acquired") {
+                if (ownHoldKeysRef.current.has(event.resourceKey)) return;
+                setHeldByOther((prev) => new Set(prev).add(time));
+                return;
+            }
+            if (
+                event.type === "hold.expired" ||
+                event.type === "hold.released"
+            ) {
+                ownHoldKeysRef.current.delete(event.resourceKey);
+                setHeldByOther((prev) => {
+                    if (!prev.has(time)) return prev;
+                    const next = new Set(prev);
+                    next.delete(time);
+                    return next;
+                });
+                setMyHold((current) =>
+                    current?.key === event.resourceKey ? null : current,
+                );
+            }
+        });
+    }, [tenantId, selectedStaff, selectedDate, availableSlots]);
+
+    const handleSelectSlot = async (time: string) => {
+        if (heldByOther.has(time) || !tenantId || !selectedStaff) return;
+        const key = appointmentSlotHoldKey(
+            tenantId,
+            selectedStaff.id,
+            selectedDate,
+            time,
+        );
+        const resourceId = appointmentSlotResourceId(
+            selectedStaff.id,
+            selectedDate,
+            time,
+        );
+        ownHoldKeysRef.current.add(key);
+        dispatch({ type: "SET_SELECTED_TIME", payload: time });
+        try {
+            await bookingService.acquireHold({
+                resourceType: "appointment",
+                tenantId,
+                resourceId,
+            });
+            if (myHold && myHold.key !== key) {
+                ownHoldKeysRef.current.delete(myHold.key);
+                void bookingService.releaseHold(myHold.key).catch(() => {});
+            }
+            setMyHold({ time, key });
+        } catch (err) {
+            ownHoldKeysRef.current.delete(key);
+            if (isConflictError(err)) {
+                setHeldByOther((prev) => new Set(prev).add(time));
+                dispatch({ type: "SET_SELECTED_TIME", payload: "" });
+                void availability.refetch();
+                return;
+            }
+            dispatch({
+                type: "SET_ERROR",
+                payload: reportError(err, "No pudimos reservar este horario."),
+            });
+        }
+    };
 
     const validateCoupon = async () => {
         if (!state.couponCode.trim() || !state.selectedService) return;
@@ -922,10 +1054,24 @@ export function BookingWizard({
                 couponCode: state.couponResult?.valid
                     ? state.couponResult.coupon?.code
                     : undefined,
+                holdKey: myHold?.key,
             };
             await bookingService.createAppointment(appointmentData);
             router.push("/appointments?success=true");
         } catch (err: any) {
+            if (isConflictError(err)) {
+                const key = myHold?.key;
+                if (key) {
+                    ownHoldKeysRef.current.delete(key);
+                    try {
+                        await bookingService.releaseHold(key);
+                    } catch {
+                        // Already expired/foreign — the refetch is authoritative.
+                    }
+                }
+                setMyHold(null);
+                void availability.refetch();
+            }
             dispatch({
                 type: "SET_ERROR",
                 payload: reportError(err, "No pudimos crear la cita."),
@@ -1021,6 +1167,9 @@ export function BookingWizard({
                     currentInstant={currentInstant}
                     loadingAvailability={loadingAvailability}
                     selectedStaff={selectedStaff}
+                    heldByOther={heldByOther}
+                    myHoldTime={myHold?.time ?? null}
+                    onSelectSlot={handleSelectSlot}
                     dispatch={dispatch}
                 />
             )}
