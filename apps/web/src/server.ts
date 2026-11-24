@@ -4,6 +4,8 @@ import {
     defaultStreamHandler,
 } from "@tanstack/react-start/server";
 
+import { onAvailabilityEvent } from "./lib/availability-events";
+import { ensureAvailabilitySubscriber } from "./lib/availability-subscriber";
 import { getBackendUrl } from "./lib/backend-url";
 import { contentTag, onContentRevalidated } from "./lib/content-cache";
 import {
@@ -61,6 +63,7 @@ function revalidationEventStream(
 ): Response {
     const encoder = new TextEncoder();
     let unsubscribe = () => {};
+    let unsubscribeAvailability = () => {};
     let heartbeat: ReturnType<typeof setInterval> | undefined;
 
     const stream = new ReadableStream<Uint8Array>({
@@ -83,6 +86,17 @@ function revalidationEventStream(
                 if (!tenantTag || tag !== tenantTag) return;
                 send(`data: ${tag}\n\n`);
             });
+            // Typed availability events arrive as JSON on the shared Redis
+            // channel. The stream is Host-scoped: an event is forwarded only
+            // when its tenantId matches this caller's derived identity.
+            unsubscribeAvailability = onAvailabilityEvent((event) => {
+                if (!identity.tenantId || event.tenantId !== identity.tenantId)
+                    return;
+                send(`data: ${JSON.stringify(event)}\n\n`);
+            });
+            // Idempotent process-level bootstrap: one Redis subscriber for all
+            // streams. Never await it — a broken Redis must not stall the feed.
+            void ensureAvailabilitySubscriber();
             // Keep idle connections alive through proxies that close streams.
             heartbeat = setInterval(() => send(": ping\n\n"), 25_000);
             request.signal.addEventListener(
@@ -90,6 +104,7 @@ function revalidationEventStream(
                 () => {
                     if (heartbeat) clearInterval(heartbeat);
                     unsubscribe();
+                    unsubscribeAvailability();
                     try {
                         controller.close();
                     } catch {
@@ -102,6 +117,7 @@ function revalidationEventStream(
         cancel() {
             if (heartbeat) clearInterval(heartbeat);
             unsubscribe();
+            unsubscribeAvailability();
         },
     });
 

@@ -20,8 +20,42 @@ interface CacheEntry {
 
 type RevalidationListener = (tag: string) => void;
 
+/**
+ * Generic in-realm listener registry. Both the legacy Strapi content tags and
+ * the typed availability events use one of these hubs; isolating the subscribe
+ * / notify / count mechanics here keeps their delivery semantics identical
+ * (including "one broken subscriber cannot abort the notifier").
+ */
+export interface TenantEventHub<T> {
+    subscribe(listener: (value: T) => void): () => void;
+    notify(value: T): void;
+    count(): number;
+}
+
+export function createTenantEventHub<T>(): TenantEventHub<T> {
+    const listeners = new Set<(value: T) => void>();
+    return {
+        subscribe(listener) {
+            listeners.add(listener);
+            return () => listeners.delete(listener);
+        },
+        notify(value) {
+            for (const listener of listeners) {
+                try {
+                    listener(value);
+                } catch {
+                    // One broken subscriber must not abort other listeners.
+                }
+            }
+        },
+        count() {
+            return listeners.size;
+        },
+    };
+}
+
 const entries = new Map<string, CacheEntry>();
-const listeners = new Set<RevalidationListener>();
+const contentEvents = createTenantEventHub<string>();
 
 export const CONTENT_TAG_PREFIX = "content:";
 
@@ -74,20 +108,13 @@ export function revalidateTag(tag: string): number {
  *  this even when the purge found nothing, so connected query clients still
  *  refetch after a publish. */
 export function notifyContentRevalidated(tag: string): void {
-    for (const listener of listeners) {
-        try {
-            listener(tag);
-        } catch {
-            // One broken subscriber must not abort the webhook's HTTP response.
-        }
-    }
+    contentEvents.notify(tag);
 }
 
 export function onContentRevalidated(
     listener: RevalidationListener,
 ): () => void {
-    listeners.add(listener);
-    return () => listeners.delete(listener);
+    return contentEvents.subscribe(listener);
 }
 
 /** Test-only reset; also useful for a process-level cache flush on deploy. */
@@ -102,5 +129,5 @@ export function contentCacheSize(): number {
 /** Test helper: number of live revalidation subscribers. Used to prove a
  *  disconnected SSE stream unsubscribes instead of leaking a listener. */
 export function contentRevalidatedListenerCount(): number {
-    return listeners.size;
+    return contentEvents.count();
 }

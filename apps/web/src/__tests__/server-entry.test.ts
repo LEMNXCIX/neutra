@@ -34,6 +34,13 @@ vi.mock("@tanstack/react-start/server", () => ({
     defaultStreamHandler: () => undefined,
 }));
 
+// The Redis subscriber is a process-level singleton opened on the first SSE
+// request. Tests drive the in-realm hub directly, so stub the bootstrap to keep
+// the suite free of sockets/open handles.
+vi.mock("@/lib/availability-subscriber", () => ({
+    ensureAvailabilitySubscriber: () => Promise.resolve(),
+}));
+
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
 
@@ -286,6 +293,108 @@ describe("server entry — tenant-scoped SSE", () => {
         } finally {
             await reader.cancel().catch(() => {});
             clearInterval.mockRestore();
+        }
+    });
+
+    it("streams typed HoldEvents (type + resourceKey) for the caller's tenant", async () => {
+        const { notifyAvailabilityEvent } = await import(
+            "@/lib/availability-events"
+        );
+        const response = await openStream("storeco.localhost:3001"); // tenant-1
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error("SSE response must have a body");
+        const event = {
+            type: "hold.acquired" as const,
+            tenantId: "tenant-1",
+            resourceKey: "hold:appointment:tenant-1:staff-1",
+            expiresAt: "2026-11-24T12:00:00.000Z",
+        };
+
+        try {
+            await reader.read(); // ": connected" flush
+            notifyAvailabilityEvent(event);
+            let received = "";
+            for (
+                let attempt = 0;
+                attempt < 4 && !received.includes("data:");
+                attempt++
+            ) {
+                received += new TextDecoder().decode(
+                    (await reader.read()).value,
+                );
+            }
+            expect(received).toContain(`data: ${JSON.stringify(event)}`);
+            expect(received).toContain('"type":"hold.acquired"');
+            expect(received).toContain(
+                '"resourceKey":"hold:appointment:tenant-1:staff-1"',
+            );
+        } finally {
+            await reader.cancel();
+        }
+    });
+
+    it("never streams a typed HoldEvent belonging to another tenant", async () => {
+        const { notifyAvailabilityEvent } = await import(
+            "@/lib/availability-events"
+        );
+        const response = await openStream("storeco.localhost:3001"); // tenant-1
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error("SSE response must have a body");
+
+        try {
+            await reader.read(); // ": connected" flush
+            notifyAvailabilityEvent({
+                type: "hold.acquired",
+                tenantId: "tenant-book",
+                resourceKey: "hold:appointment:tenant-book:staff-9",
+            });
+            // A same-tenant sentinel guarantees a read returns; the foreign
+            // event (emitted first) must still be absent from the stream.
+            notifyAvailabilityEvent({
+                type: "hold.released",
+                tenantId: "tenant-1",
+                resourceKey: "hold:product:tenant-1:p1",
+            });
+            let received = "";
+            for (
+                let attempt = 0;
+                attempt < 4 && !received.includes('"type"');
+                attempt++
+            ) {
+                received += new TextDecoder().decode(
+                    (await reader.read()).value,
+                );
+            }
+            expect(received).toContain('"tenantId":"tenant-1"');
+            expect(received).not.toContain("tenant-book");
+            expect(received).not.toContain('"type":"hold.acquired"');
+        } finally {
+            await reader.cancel();
+        }
+    });
+
+    it("releases the typed-event listener when the client disconnects", async () => {
+        const { availabilityListenerCount } = await import(
+            "@/lib/availability-events"
+        );
+        const baseline = availabilityListenerCount();
+        const controller = new AbortController();
+
+        const response = await openStream(
+            "storeco.localhost:3001",
+            controller.signal,
+        );
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error("SSE response must have a body");
+
+        try {
+            await reader.read();
+            expect(availabilityListenerCount()).toBe(baseline + 1);
+            controller.abort();
+            await reader.read();
+            expect(availabilityListenerCount()).toBe(baseline);
+        } finally {
+            await reader.cancel().catch(() => {});
         }
     });
 });

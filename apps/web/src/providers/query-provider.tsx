@@ -1,8 +1,13 @@
 "use client";
 
+import { HoldEventSchema } from "@neutra/commons";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { onContentRevalidated } from "@/lib/content-cache";
+import { invalidateAvailability } from "@/lib/availability-events";
+import {
+    CONTENT_TAG_PREFIX,
+    onContentRevalidated,
+} from "@/lib/content-cache";
 import { registerQueryClient } from "@/lib/query-invalidation";
 
 /**
@@ -51,8 +56,20 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         if (typeof EventSource === "undefined") return;
         const source = new EventSource("/api/revalidate/events");
-        const onRevalidated = () => {
-            void queryClient.invalidateQueries();
+        const onRevalidated = (message: MessageEvent) => {
+            const raw = message?.data;
+            if (typeof raw !== "string") return;
+            if (raw.startsWith(CONTENT_TAG_PREFIX)) {
+                // Legacy Strapi publish: keep the original global refetch.
+                void queryClient.invalidateQueries();
+                return;
+            }
+            try {
+                const event = HoldEventSchema.parse(JSON.parse(raw));
+                invalidateAvailability(queryClient, event);
+            } catch {
+                // Ignore malformed SSE payloads; never refetch on garbage.
+            }
         };
         source.addEventListener("message", onRevalidated);
         return () => {
