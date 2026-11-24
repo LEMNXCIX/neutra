@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import config from "@/config/index.config";
 import { TENANT_HTTP_CONSTANTS } from "@/config/infrastructure-constants";
 import { isDevelopment, TENANT_CONSTANTS } from "@/core/domain/constants";
 import { evaluateTenantActive } from "@/core/domain/tenant/feature-policy";
@@ -48,26 +49,31 @@ export function createTenantMiddleware(deps: {
             let tenantId: string | undefined;
             let tenantSlug: string | undefined;
 
-            const headerTenantId = req.headers["x-tenant-id"] as string;
-            const headerTenantSlug = req.headers["x-tenant-slug"] as string;
+            // In host-only mode a caller must not be able to choose a tenant
+            // with a header or cookie; the web BFF derives both from Host.
+            if (!config.tenantTrustHostOnly) {
+                const headerTenantId = req.headers["x-tenant-id"] as string;
+                const headerTenantSlug = req.headers["x-tenant-slug"] as string;
 
-            if (headerTenantId) tenantId = headerTenantId;
-            if (headerTenantSlug) tenantSlug = headerTenantSlug;
+                if (headerTenantId) tenantId = headerTenantId;
+                if (headerTenantSlug) tenantSlug = headerTenantSlug;
 
-            if (!tenantId && !tenantSlug) {
-                const cookieHeader = req.headers.cookie;
-                if (cookieHeader) {
-                    const cookies = cookieHeader
-                        .split(";")
-                        .reduce((acc: Record<string, string>, cookie) => {
-                            const [key, value] = cookie.trim().split("=");
-                            acc[key] = value;
-                            return acc;
-                        }, {});
+                if (!tenantId && !tenantSlug) {
+                    const cookieHeader = req.headers.cookie;
+                    if (cookieHeader) {
+                        const cookies = cookieHeader
+                            .split(";")
+                            .reduce((acc: Record<string, string>, cookie) => {
+                                const [key, value] = cookie.trim().split("=");
+                                acc[key] = value;
+                                return acc;
+                            }, {});
 
-                    if (cookies["tenant-id"]) tenantId = cookies["tenant-id"];
-                    if (cookies["tenant-slug"])
-                        tenantSlug = cookies["tenant-slug"];
+                        if (cookies["tenant-id"])
+                            tenantId = cookies["tenant-id"];
+                        if (cookies["tenant-slug"])
+                            tenantSlug = cookies["tenant-slug"];
+                    }
                 }
             }
 

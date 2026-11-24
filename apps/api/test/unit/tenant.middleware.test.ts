@@ -181,4 +181,77 @@ describe("tenant middleware", () => {
     });
 });
 
+describe("tenant middleware with TENANT_TRUST_HOST_ONLY=true", () => {
+    const originalFlag = config.tenantTrustHostOnly;
+
+    afterEach(() => {
+        config.tenantTrustHostOnly = originalFlag;
+        delete process.env.TENANT_TRUST_HOST_ONLY;
+    });
+
+    test("ignores x-tenant-slug header and resolves from Host subdomain", async () => {
+        process.env.TENANT_TRUST_HOST_ONLY = "true";
+        config.tenantTrustHostOnly = true;
+        const { mw, tenantRepository } = setup("prod", {
+            findBySlug: jest.fn().mockImplementation(async (slug: string) => ({
+                ...activeTenant,
+                slug,
+            })),
+        });
+        const req: Req = {
+            originalUrl: "/api/products",
+            headers: {
+                host: "store.ejemplo.com",
+                "x-tenant-slug": "superadmin",
+            },
+        };
+        const { next } = await run(mw, req);
+
+        expect(tenantRepository.findBySlug).toHaveBeenCalledWith("store");
+        expect(tenantRepository.findBySlug).not.toHaveBeenCalledWith(
+            "superadmin",
+        );
+        expect(req.tenant).toMatchObject({ slug: "store" });
+        expect(next).toHaveBeenCalled();
+    });
+
+    test("ignores tenant cookies and resolves from Host subdomain", async () => {
+        config.tenantTrustHostOnly = true;
+        const { mw, tenantRepository } = setup("prod", {
+            findBySlug: jest.fn().mockImplementation(async (slug: string) => ({
+                ...activeTenant,
+                slug,
+            })),
+        });
+        await run(mw, {
+            originalUrl: "/api/products",
+            headers: {
+                host: "store.ejemplo.com",
+                cookie: "tenant-slug=superadmin; tenant-id=t1",
+            },
+        });
+
+        expect(tenantRepository.findBySlug).toHaveBeenCalledWith("store");
+        expect(tenantRepository.findBySlug).not.toHaveBeenCalledWith(
+            "superadmin",
+        );
+        expect(tenantRepository.findById).not.toHaveBeenCalled();
+    });
+
+    test("keeps the superadmin fallback for management routes", async () => {
+        config.tenantTrustHostOnly = true;
+        const { mw, tenantRepository } = setup("prod", {
+            findBySlug: jest.fn().mockResolvedValue(activeTenant),
+        });
+        await run(mw, {
+            originalUrl: "/api/tenants",
+            headers: { host: "www.ejemplo.com", "x-tenant-slug": "store1" },
+        });
+
+        expect(tenantRepository.findBySlug).toHaveBeenCalledWith(
+            TENANT_CONSTANTS.SUPERADMIN_SLUG,
+        );
+    });
+});
+
 export {};

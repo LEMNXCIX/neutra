@@ -43,6 +43,13 @@ const config = {
     allowedOrigins: process.env.ALLOWED_ORIGINS || "",
     frontendUrl: process.env.FRONTEND_URL || "http://localhost:3000",
     whatsappVerifyToken: process.env.WHATSAPP_VERIFY_TOKEN || "",
+    /**
+     * When true, tenant identity comes only from the Host subdomain:
+     * x-tenant-id/x-tenant-slug headers and tenant cookies are ignored.
+     * Off by default; enable explicitly in CI/production once the web BFF
+     * overwrites those headers from Host on every request.
+     */
+    tenantTrustHostOnly: process.env.TENANT_TRUST_HOST_ONLY === "true",
 };
 
 // Fail fast in production when critical secrets are missing or left at the
