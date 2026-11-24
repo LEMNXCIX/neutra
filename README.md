@@ -126,6 +126,28 @@ under `apps/web/src/app/api/holds/**` and their generated form under
 `node apps/web/scripts/generate-api-routes.mjs` instead of editing generated
 files by hand.
 
+The SSE feed is UX in the same sense: it is a Host-scoped, tenant-filtered
+notification that triggers a scoped query refetch, not an authorization boundary
+and not a reservation. A missed event is safe because the client re-fetches;
+the authoritative guards remain the transactional appointment slot lock (409 on
+a lost race) and the checkout's atomic stock decrement (a failed decrement
+rejects the order even if the hold has expired). The web bridge keeps one Redis
+subscriber per process, so a multi-replica deployment still relies on sticky
+routing plus that refetch; SSE authentication is deliberately unchanged. The
+`x-tenant-slug` / `x-tenant-id` headers sent by the smoke and the BFF are
+identity hints only — tenant identity is derived from the Host.
+
+**Restock debt (D8 — accepted, not remediated in this cut).** There is no
+`restock` flow: holds expire through Redis TTL and are never turned into stock
+movements, and cancelling an order does not return units to `Product.stock`.
+`held` and `available` are a UX projection (`available = max(0, stock − active
+holds)`); they are not a committed inventory reservation. Emitting
+`stock.changed` from real stock mutations and restocking on cancellation are
+explicit follow-up work — no stock ledger, restock job or production behaviour
+was introduced to make this gate pass. `scripts/verify-availability-dod.mjs`
+records the eight acceptance checks for this cut (including a clean tree, so
+run it after committing).
+
 ## Follow-ups
 
 - **Security debt (accepted WARN, not remediated here).** `npm.audit` in the
