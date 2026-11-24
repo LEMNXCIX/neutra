@@ -3,7 +3,10 @@
 import { HoldEventSchema } from "@neutra/commons";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { invalidateAvailability } from "@/lib/availability-events";
+import {
+    invalidateAvailability,
+    notifyAvailabilityEvent,
+} from "@/lib/availability-events";
 import {
     CONTENT_TAG_PREFIX,
     onContentRevalidated,
@@ -66,6 +69,10 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
             }
             try {
                 const event = HoldEventSchema.parse(JSON.parse(raw));
+                // Both halves of the browser realm must be fed: the local hub
+                // drives held-by-other slot/store state, while the invalidation
+                // refetches this client's availability queries.
+                notifyAvailabilityEvent(event);
                 invalidateAvailability(queryClient, event);
             } catch {
                 // Ignore malformed SSE payloads; never refetch on garbage.

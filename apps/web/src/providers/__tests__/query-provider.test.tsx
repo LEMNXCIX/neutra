@@ -2,8 +2,10 @@
 /** The browser half of the revalidation bridge: QueryProvider registers its
  *  client and refetches when Strapi publishes new content. */
 import { QueryClient, useQueryClient } from "@tanstack/react-query";
-import { act, render } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
+import { useEffect, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { onAvailabilityEvent } from "@/lib/availability-events";
 import { notifyContentRevalidated } from "@/lib/content-cache";
 import { registeredQueryClientCount } from "@/lib/query-invalidation";
 import { QueryProvider } from "@/providers/query-provider";
@@ -13,6 +15,21 @@ let captured: QueryClient | undefined;
 function CaptureClient() {
     captured = useQueryClient();
     return null;
+}
+
+/** Browser-realm consumer: its state can only change via the in-realm hub. */
+function AvailabilityConsumer() {
+    const [heldResource, setHeldResource] = useState<string | null>(null);
+    useEffect(
+        () =>
+            onAvailabilityEvent((event) => {
+                if (event.type === "hold.acquired") {
+                    setHeldResource(event.resourceKey);
+                }
+            }),
+        [],
+    );
+    return <div data-testid="held-resource">{heldResource}</div>;
 }
 
 class FakeEventSource {
@@ -118,6 +135,34 @@ describe("QueryProvider revalidation bridge", () => {
             queryKey: ["availability", "appointment", "tenant-1"],
         });
         expect(invalidate).not.toHaveBeenCalledWith();
+
+        view.unmount();
+        expect(source.closed).toBe(true);
+    });
+
+    it("feeds a real SSE HoldEvent into an in-realm consumer's state via the hub", () => {
+        vi.stubGlobal("EventSource", FakeEventSource);
+
+        const view = render(
+            <QueryProvider>
+                <AvailabilityConsumer />
+            </QueryProvider>,
+        );
+
+        const source = FakeEventSource.instances[0];
+        const event = {
+            type: "hold.acquired",
+            tenantId: "tenant-1",
+            resourceKey: "hold:product:tenant-1:p1",
+            expiresAt: "2026-11-24T12:00:00.000Z",
+        };
+        // No direct notifyAvailabilityEvent call: the only path to the
+        // consumer's state is EventSource -> provider -> browser-realm hub.
+        act(() => source.emit("message", JSON.stringify(event)));
+
+        expect(screen.getByTestId("held-resource").textContent).toBe(
+            event.resourceKey,
+        );
 
         view.unmount();
         expect(source.closed).toBe(true);

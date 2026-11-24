@@ -45,6 +45,10 @@ export function useProductAvailability({
                 ) as unknown as Promise<ProductStock>,
             enabled: Boolean(tenantId && productId),
             staleTime: 0,
+            // Safety net when the SSE bridge is down: periodic + focus re-fetch
+            // (spec §6). SSE invalidation stays the primary, low-latency path.
+            refetchInterval: 30_000,
+            refetchOnWindowFocus: true,
         },
         queryClient,
     );
