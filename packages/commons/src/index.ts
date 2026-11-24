@@ -1,5 +1,6 @@
 export * from "./enums/index.js";
 export * from "./_common/index.js";
+export * from "./availability/index.js";
 
 export * from "./booking/entities/index.js";
 export * from "./catalog/entities/index.js";
