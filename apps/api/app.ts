@@ -244,6 +244,12 @@ if (require.main === module) {
             `Server started on http://localhost:${portNumber} (0.0.0.0)`,
         );
     });
+
+    // Fire-and-forget: Redis is optional for serving HTTP. A failed
+    // subscription is logged, never propagated to the server entrypoint.
+    void runtime.startHoldExpiry().catch((err) => {
+        logger.error("Failed to start hold expiry subscriber", err);
+    });
 }
 
 export default app;

@@ -70,6 +70,9 @@ services:
 
   redis:
     image: redis:7-alpine
+    # Native TTL expiry alone is silent; `Ex` emits the keyevent the API
+    # subscriber turns into hold.expired. Duplicate of configSet at runtime.
+    command: ["redis-server", "--notify-keyspace-events", "Ex"]
     ports:
       - "127.0.0.1:6379:6379"
     volumes:

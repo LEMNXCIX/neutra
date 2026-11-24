@@ -34,6 +34,7 @@ import { JwtProvider } from "../providers/jwt.provider";
 import { NodeCryptoProvider } from "../providers/node-crypto.provider";
 import { PinoLoggerProvider } from "../providers/pino-logger.provider";
 import { PushProvider } from "../providers/push.provider";
+import { startHoldExpirySubscriber } from "../providers/redis-expiry-subscriber";
 import { RedisHoldProvider } from "../providers/redis-hold.provider";
 import { RedisProvider } from "../providers/redis.provider";
 import { RedisPubSubProvider } from "../providers/redis-pubsub.provider";
@@ -97,6 +98,16 @@ export function createRuntime() {
     const hold = new RedisHoldProvider(availabilityClient);
     const eventBus = new RedisPubSubProvider(availabilityClient);
 
+    // Expiry notifications need their own connection: a subscriber-mode client
+    // cannot issue SET/GET/PUBLISH for holds and the shared availability bus.
+    const holdExpiryClient = createClient({
+        url: `redis://${redisOptions.host}:${redisOptions.port}`,
+        password: config.redisPassword,
+    });
+    holdExpiryClient.on("error", (err) =>
+        logger.error("Hold expiry Redis Client Error", err),
+    );
+
     const providers = {
         config: new EnvConfigProvider(),
         logger,
@@ -157,15 +168,25 @@ export function createRuntime() {
         providers.cache.ping(),
     );
 
+    // Bound so the entrypoint only has to start it; `holdExpiryClient` stays
+    // exposed for the shutdown path to close it.
+    const startHoldExpiry = () =>
+        startHoldExpirySubscriber(holdExpiryClient, eventBus);
+
     return {
         database: { prisma, checkDatabaseConnection },
-        connections: { redis: connection },
+        connections: {
+            redis: connection,
+            availability: availabilityClient,
+            holdExpiry: holdExpiryClient,
+        },
         queues,
         repositories,
         providers,
         services,
         useCases,
         healthService,
+        startHoldExpiry,
     };
 }
 

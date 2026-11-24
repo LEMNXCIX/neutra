@@ -16,6 +16,34 @@ export function holdKey(
 	return `hold:${resourceType}:${tenantId}:${resourceId}`;
 }
 
+/** The parts encoded by `holdKey` and recoverable from a Redis keyevent. */
+export type ParsedHoldKey = {
+	resourceType: "appointment" | "product";
+	tenantId: string;
+	resourceId: string;
+};
+
+/**
+ * Inverse of `holdKey`. Redis expiry notifications carry only the key, so the
+ * tenant and resource are recovered from its canonical four-segment shape.
+ * Returns `null` for anything that is not a hold key.
+ */
+export function parseHoldKey(key: string): ParsedHoldKey | null {
+	const parts = key.split(":");
+	if (parts.length !== 4 || parts[0] !== "hold") return null;
+	const resourceType = parts[1];
+	const tenantId = parts[2];
+	const resourceId = parts[3];
+	if (
+		(resourceType !== "appointment" && resourceType !== "product") ||
+		!tenantId ||
+		!resourceId
+	) {
+		return null;
+	}
+	return { resourceType, tenantId, resourceId };
+}
+
 /** Body accepted when acquiring a hold; TTL defaults to the caller's policy. */
 export const AcquireHoldRequestSchema = z.object({
 	resourceType: holdResourceTypeSchema,

@@ -3,6 +3,7 @@ import {
 	AcquireHoldRequestSchema,
 	HoldEventSchema,
 	holdKey,
+	parseHoldKey,
 } from "../availability";
 import type { AvailableStock, HoldEvent } from "../availability";
 
@@ -11,6 +12,27 @@ describe("shared availability contracts", () => {
 		expect(holdKey("appointment", "t1", "s1")).toBe(
 			"hold:appointment:t1:s1",
 		);
+	});
+
+	it("(a2) parses canonical hold keys back into tenant and resource", () => {
+		expect(parseHoldKey(holdKey("product", "t1", "p1"))).toEqual({
+			resourceType: "product",
+			tenantId: "t1",
+			resourceId: "p1",
+		});
+		expect(parseHoldKey(holdKey("appointment", "t1", "s1"))).toEqual({
+			resourceType: "appointment",
+			tenantId: "t1",
+			resourceId: "s1",
+		});
+	});
+
+	it("(a3) rejects non-hold and malformed keys", () => {
+		expect(parseHoldKey("basura")).toBeNull();
+		expect(parseHoldKey("other:product:t1:p1")).toBeNull();
+		expect(parseHoldKey("hold:vehicle:t1:p1")).toBeNull();
+		expect(parseHoldKey("hold:product:t1")).toBeNull();
+		expect(parseHoldKey("hold:product:t1:p1:extra")).toBeNull();
 	});
 
 	it("(b) validates acquire-hold requests", () => {
