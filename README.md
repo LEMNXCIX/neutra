@@ -87,8 +87,8 @@ failures, and the DoD gate does not try to "fix" them:
 
 1. **`npm.audit` reports WARN in the `ci` doctor profile.** The doctor shells
    out to `bun audit --json`, which carries no `fixAvailable` metadata, so the
-   22 remaining advisories are classified as "without a non-breaking fix" and
-   the check reports WARN rather than FAIL. This is accepted: the gate still
+   7 advisories (5 moderate, 2 high, 0 critical) are classified as "without a
+   non-breaking fix" and the check reports WARN rather than FAIL. This is accepted: the gate still
    blocks on registry/unverifiable failures, no dependency is upgraded, and no
    blocking check is suppressed. The critical `xmldom` advisory was removed in
    the debt-remediation plan; see the final debt status below.
@@ -182,7 +182,8 @@ after committing).
 
 **Accepted and left out of scope** (recorded, not silently dropped):
 
-- `npm.audit` still reports **WARN for 22 advisories** in the `ci` doctor
+- `npm.audit` still reports **WARN for 7 advisories (5 moderate, 2 high,
+  0 critical)** in the `ci` doctor
   profile (transitive/exact-pinned; no `fixAvailable`, no safe semver bump).
   Per accepted ruling T6 nothing is upgraded and no blocking check is
   suppressed; this is tracked as separate dependency work.

@@ -21,7 +21,7 @@ Se triaron con evidencia las deudas documentadas al cierre de la feature de disp
 | H | Generador no reduce el manifest | `generate-api-routes.mjs:264-273` siembra desde el manifest (79) y nunca borra entradas; solo 4 sources reales. | SÍ — sembrar desde disco |
 | I | Comentario obsoleto en `query-provider.tsx:55`; `REDIS_*` ausente en compose web | El SSE degrada sin REDIS_* (re-fetch de red). | SÍ — documentación/config |
 
-**Fuera de alcance** (triado como ruido o decisión anterior): WARN de `npm.audit` por los 22 advisories restantes — todos transitivos o exact-pinned (`effect` vía Prisma, `react-router`/`zod` vía Strapi, `glob`/`minimatch` vía Jest), sin `fixAvailable` y sin bump seguro dentro del semver actual; se mantiene documentado como T6. Multi-replica in-process listeners, SSE sin auth y restock posterior a `ENTREGADO`: decisiones previas (spec §10 / D8).
+**Fuera de alcance** (triado como ruido o decisión anterior): WARN de `npm.audit` por los 7 advisories restantes — todos transitivos o exact-pinned (`effect` vía Prisma, `react-router`/`zod` vía Strapi, `glob`/`minimatch` vía Jest), sin `fixAvailable` y sin bump seguro dentro del semver actual; se mantiene documentado como T6. Multi-replica in-process listeners, SSE sin auth y restock posterior a `ENTREGADO`: decisiones previas (spec §10 / D8).
 
 ## 2. Decisiones
 
@@ -101,7 +101,7 @@ Se triaron con evidencia las deudas documentadas al cierre de la feature de disp
 
 ## 8. Fuera de alcance
 
-- Los otros 22 advisories de `npm.audit` (transitivos/pinned, sin bump seguro).
+- Los 7 advisories restantes de `npm.audit` (transitivos/pinned, sin bump seguro).
 - Reversión de lealtad y reembolsos.
 - Cancelación desde `PAGADO`/`ENVIADO`/`ENTREGADO`.
 - Multi-replica de listeners SSE, autenticación del SSE, CSS/UI nueva.
