@@ -11,6 +11,8 @@ export const IProductResponseSchema = z.object({
   image: z.string().nullable(),
   price: z.number(),
   stock: z.number(),
+  held: z.number().optional(),
+  available: z.number().optional(),
   active: z.boolean(),
   ownerId: z.string(),
   tenant: ITenantMinimalResponseSchema.optional(),

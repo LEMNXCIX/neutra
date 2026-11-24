@@ -42,8 +42,8 @@ export function createCatalogControllers(runtime: Runtime) {
 
     return {
         product: new ProductController(
-            new GetAllProductsUseCase(r.product, p.hold),
-            new GetProductUseCase(r.product, p.hold),
+            new GetAllProductsUseCase(r.product, p.hold, p.logger),
+            new GetProductUseCase(r.product, p.hold, p.logger),
             new CreateProductUseCase(r.product),
             new UpdateProductUseCase(r.product),
             new DeleteProductUseCase(r.product),

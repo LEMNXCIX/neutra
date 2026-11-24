@@ -4,6 +4,7 @@ import { GetAllProductsUseCase } from "@/core/application/products/get-all-produ
 import { GetProductUseCase } from "@/core/application/products/get-product.use-case";
 import type { Product } from "@/core/entities/product.entity";
 import type { IHoldProvider } from "@/core/providers/hold-provider.interface";
+import type { ILogger } from "@/core/providers/logger.interface";
 import type { IProductRepository } from "@/core/repositories/product.repository.interface";
 
 function product(id: string, tenantId = "acme", stock = 5): Product {
@@ -141,6 +142,48 @@ describe("product availability with active holds", () => {
         expect(oneResult.data).toEqual(
             expect.objectContaining({ held: 1, available: 4 }),
         );
+    });
+
+    it("serves real stock with zero holds when the hold provider rejects", async () => {
+        const countActive = jest.fn(async (): Promise<Record<string, number>> => {
+            throw new Error("redis unavailable");
+        });
+        const provider: IHoldProvider = {
+            acquire: jest.fn(),
+            release: jest.fn(),
+            countActive,
+        };
+        const warn = jest.fn();
+        const logger = { warn } as unknown as ILogger;
+        const repository = repositoryWith([p1]);
+
+        const list = await new GetAllProductsUseCase(
+            repository,
+            provider,
+            logger,
+        ).execute("acme");
+        const one = await new GetProductUseCase(
+            repository,
+            provider,
+            logger,
+        ).execute("acme", "p1");
+
+        expect(list.data).toEqual([
+            expect.objectContaining({ stock: 5, held: 0, available: 5 }),
+        ]);
+        expect(one.data).toEqual(
+            expect.objectContaining({ stock: 5, held: 0, available: 5 }),
+        );
+        expect(warn).toHaveBeenCalledTimes(2);
+
+        // Without a logger the same failure is a harmless no-op.
+        const withoutLogger = await new GetAllProductsUseCase(
+            repository,
+            provider,
+        ).execute("acme");
+        expect(withoutLogger.data).toEqual([
+            expect.objectContaining({ stock: 5, held: 0, available: 5 }),
+        ]);
     });
 
     it("defaults held and available to zero for other fromEntity callers", () => {
