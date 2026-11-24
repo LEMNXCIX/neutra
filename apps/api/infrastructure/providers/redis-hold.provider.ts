@@ -1,3 +1,4 @@
+import { HoldConflictError } from "@/core/providers/hold-conflict.error";
 import type { IHoldProvider } from "@/core/providers/hold-provider.interface";
 
 /** The four Redis commands a hold needs. Kept structural for easy injection. */
@@ -27,7 +28,15 @@ export class RedisHoldProvider implements IHoldProvider {
     ): Promise<{ key: string; expiresAt: Date }> {
         // SET key ownerId EX ttl NX: expiry is native, and an existing owner
         // is never overwritten. Only ownerId is stored as the value.
-        await this.client.set(key, ownerId, { EX: ttlSeconds, NX: true });
+        // NX miss returns null: the caller must not receive success-shaped data
+        // with an expiry that does not belong to the real holder.
+        const acquired = await this.client.set(key, ownerId, {
+            EX: ttlSeconds,
+            NX: true,
+        });
+        if (acquired === null) {
+            throw new HoldConflictError(key);
+        }
         return { key, expiresAt: new Date(Date.now() + ttlSeconds * 1000) };
     }
 

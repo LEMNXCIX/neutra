@@ -1,3 +1,4 @@
+import { HoldConflictError } from "@/core/providers/hold-conflict.error";
 import {
     type HoldRedisClient,
     RedisHoldProvider,
@@ -105,17 +106,23 @@ describe("RedisHoldProvider", () => {
         await expect(provider.countActive([])).resolves.toEqual({});
     });
 
-    it("does not overwrite an existing hold (NX) when another owner acquires it", async () => {
-        const { client, spies } = createFakeRedis();
+    it("rejects a competing acquire with HoldConflictError and keeps the first hold", async () => {
+        const { client, spies, store } = createFakeRedis();
         const provider = new RedisHoldProvider(client);
         await provider.acquire("k", "o1", 60);
 
-        await provider.acquire("k", "o2", 60);
+        const competing = provider.acquire("k", "o2", 60);
+        await expect(competing).rejects.toBeInstanceOf(HoldConflictError);
+        await expect(competing).rejects.toMatchObject({
+            key: "k",
+            code: "HOLD_CONFLICT",
+        });
 
         expect(spies.set).toHaveBeenLastCalledWith("k", "o2", {
             EX: 60,
             NX: true,
         });
+        expect(store.get("k")?.value).toBe("o1");
         await expect(provider.countActive(["k"])).resolves.toEqual({ k: 1 });
         await expect(provider.release("k", "o2")).resolves.toBe(false);
         await expect(provider.release("k", "o1")).resolves.toBe(true);
