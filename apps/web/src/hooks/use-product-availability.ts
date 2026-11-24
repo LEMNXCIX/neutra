@@ -1,6 +1,6 @@
 "use client";
 
-import { holdKey } from "@neutra/commons";
+import { holdKey, type IProductResponse } from "@neutra/commons";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { onAvailabilityEvent } from "@/lib/availability-events";
@@ -8,12 +8,6 @@ import { useOptionalQueryClient } from "@/lib/optional-query-client";
 import { productsService } from "@/services/products.service";
 import { isOwnProductHold } from "@/store/tanstack/cart-store";
 import { useTenantStore } from "@/store/tenant-store";
-
-/**
- * `IProductResponse` is published by commons but its generated `dist` types
- * predate the optional availability fields, so the wire shape is mirrored here.
- */
-type ProductStock = { stock: number; held?: number; available?: number };
 
 export interface UseProductAvailabilityParams {
     productId: string;
@@ -36,13 +30,12 @@ export function useProductAvailability({
     const queryClient = useOptionalQueryClient();
     const [heldByOther, setHeldByOther] = useState(false);
 
-    const query = useQuery<ProductStock>(
+    const query = useQuery<
+        Pick<IProductResponse, "stock" | "held" | "available">
+    >(
         {
             queryKey: ["availability", "product", tenantId, productId],
-            queryFn: () =>
-                productsService.getById(
-                    productId,
-                ) as unknown as Promise<ProductStock>,
+            queryFn: () => productsService.getById(productId),
             enabled: Boolean(tenantId && productId),
             staleTime: 0,
             // Safety net when the SSE bridge is down: periodic + focus re-fetch

@@ -1,3 +1,4 @@
+import type { IProductResponse } from "@neutra/commons";
 import { api } from "@/lib/api-client";
 import type {
     CreateProductDTO,
@@ -21,8 +22,12 @@ export const productsService = {
     /**
      * Get product by ID
      */
-    getById: async (id: string): Promise<Product> => {
-        return api.get<Product>(`/products/${id}`);
+    getById: async (
+        id: string,
+    ): Promise<Pick<IProductResponse, "stock" | "held" | "available">> => {
+        return api.get<Pick<IProductResponse, "stock" | "held" | "available">>(
+            `/products/${id}`,
+        );
     },
 
     /**

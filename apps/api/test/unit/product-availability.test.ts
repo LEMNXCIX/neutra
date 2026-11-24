@@ -186,9 +186,16 @@ describe("product availability with active holds", () => {
         ]);
     });
 
-    it("defaults held and available to zero for other fromEntity callers", () => {
+    it("defaults held to zero and available to stock for other fromEntity callers", () => {
         expect(ProductResponse.fromEntity(p1)).toEqual(
-            expect.objectContaining({ stock: 5, held: 0, available: 0 }),
+            expect.objectContaining({ stock: 5, held: 0, available: 5 }),
+        );
+    });
+
+    it("tracks the product stock in the availability default", () => {
+        const plentiful = product("plentiful", "acme", 12);
+        expect(ProductResponse.fromEntity(plentiful)).toEqual(
+            expect.objectContaining({ stock: 12, held: 0, available: 12 }),
         );
     });
 });

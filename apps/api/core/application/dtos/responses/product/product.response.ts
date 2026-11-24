@@ -27,7 +27,7 @@ export class ProductResponse {
     static fromEntity(
         product: Product,
         held = 0,
-        available = 0,
+        available = product.stock,
     ): IProductResponse {
         return {
             id: product.id,
@@ -36,8 +36,8 @@ export class ProductResponse {
             image: product.image ?? null,
             price: product.price,
             stock: product.stock,
-            // Callers outside the read use cases have no hold data; they keep
-            // seeing a complete DTO with neutral defaults.
+            // Callers outside the read use cases have no hold data; report the
+            // full stock as available instead of marking the product sold out.
             held,
             available,
             active: product.active,
