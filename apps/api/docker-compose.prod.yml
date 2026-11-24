@@ -15,6 +15,9 @@ services:
       - SUPER_ADMIN_PASSWORD=${SUPER_ADMIN_PASSWORD:-}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      # Tenant identity from Host subdomain only; overridable for
+      # non-subdomain deployments.
+      - TENANT_TRUST_HOST_ONLY=${TENANT_TRUST_HOST_ONLY:-true}
       - TZ=America/Bogota
     ports:
       - "${PORT:-3000}:${PORT:-3000}"

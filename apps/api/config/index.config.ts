@@ -46,8 +46,8 @@ const config = {
     /**
      * When true, tenant identity comes only from the Host subdomain:
      * x-tenant-id/x-tenant-slug headers and tenant cookies are ignored.
-     * Off by default; enable explicitly in CI/production once the web BFF
-     * overwrites those headers from Host on every request.
+     * Off by default; enable explicitly in production only, do not enable in
+     * CI (integration suites authenticate via x-tenant-*).
      */
     tenantTrustHostOnly: process.env.TENANT_TRUST_HOST_ONLY === "true",
 };

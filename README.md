@@ -179,8 +179,8 @@ after committing).
   idempotently in the same transaction.
 - **`hold.expired`** — Redis keyspace notifications (`Ex`) plus a dedicated
   subscriber publish real TTL expirations; at-most-once, no replay.
-- **Graceful shutdown** — `SIGTERM`/`SIGINT` close the HTTP server, both Redis
-  clients and the workers/queues.
+- **Graceful shutdown** — `SIGTERM`/`SIGINT` close the HTTP server, workers
+  and queues, and all three Redis clients.
 - **Types and stock defaults** — `available = stock` by default; the web
   consumes `IProductResponse` from `@neutra/commons` without local casts.
 - **Route generator** — the API route manifest is seeded from disk, so deleting

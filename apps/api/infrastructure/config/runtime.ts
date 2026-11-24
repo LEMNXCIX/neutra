@@ -216,7 +216,12 @@ export function createRuntime() {
                     await availabilityClient.quit();
                 },
                 async () => {
-                    await holdExpiryClient.quit();
+                    // The subscriber may never have connected (e.g. boot
+                    // failed before startHoldExpiry); quitting a closed client
+                    // logs a spurious shutdown error.
+                    if (holdExpiryClient.isOpen) {
+                        await holdExpiryClient.quit();
+                    }
                 },
                 ...workers.map((worker) => () => worker.close()),
                 ...Object.values(queues).map((queue) => () => queue.close()),

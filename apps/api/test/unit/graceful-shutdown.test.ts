@@ -8,6 +8,8 @@ import { createRuntime } from "@/infrastructure/config/runtime";
 jest.mock("redis", () => ({
     createClient: jest.fn().mockImplementation(() => ({
         on: jest.fn(),
+        // Simulate connected clients; the hold-expiry quit is guarded by isOpen.
+        isOpen: true,
         connect: jest.fn().mockResolvedValue(undefined),
         quit: jest.fn().mockResolvedValue(undefined),
         set: jest.fn().mockResolvedValue("OK"),

@@ -11,6 +11,7 @@ export const HOLD_EXPIRED_CHANNEL = "__keyevent@0__:expired";
 export interface HoldExpiryRedisClient {
     readonly isOpen?: boolean;
     connect(): Promise<unknown>;
+    configGet(name: string): Promise<Record<string, unknown>>;
     configSet(name: string, value: string): Promise<unknown>;
     subscribe(
         channel: string,
@@ -35,7 +36,26 @@ export async function startHoldExpirySubscriber(
     }
     // Stock redis:7-alpine ships with keyspace events disabled; enabling `Ex`
     // here makes the feature work even when the server was not configured.
-    await client.configSet("notify-keyspace-events", "Ex");
+    // CONFIG SET replaces the whole flag string, so read the current classes
+    // and union `Ex` into them instead of clobbering other notifications.
+    // A managed server may deny CONFIG GET; fall back to the minimal flags.
+    let currentFlags: string | undefined;
+    try {
+        const config = await client.configGet("notify-keyspace-events");
+        const value = config["notify-keyspace-events"];
+        if (typeof value === "string") currentFlags = value;
+    } catch {
+        currentFlags = undefined;
+    }
+
+    if (currentFlags === undefined) {
+        await client.configSet("notify-keyspace-events", "Ex");
+    } else {
+        await client.configSet(
+            "notify-keyspace-events",
+            [...new Set(`${currentFlags}Ex`)].join(""),
+        );
+    }
 
     await client.subscribe(HOLD_EXPIRED_CHANNEL, (key) => {
         const parsed = parseHoldKey(key);
