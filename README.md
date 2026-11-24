@@ -68,6 +68,15 @@ Both final DoD verifiers expect the sibling repos on disk: `verify-dod.mjs`
 compares `../neutra-frontend` against `scripts/.frontend-baseline.txt`, and
 `verify-web-dod.mjs` re-runs that gate as its last check.
 
+`scripts/verify-debt-remediation.mjs` is the final acceptance gate for the
+deferred-debt plan. It asserts all eight remediation criteria: no
+`passport-twitter`/`xmldom`, `TENANT_TRUST_HOST_ONLY` wiring (config, middleware
+and CI), `CANCELADO` and its idempotent migration, `hold.expired` plus Redis
+keyspace notifications, graceful shutdown, `available = stock` defaults with
+shared web types, a disk-seeded route manifest and a clean tree. Run it with
+`node scripts/verify-debt-remediation.mjs` **after committing** — like the other
+final gates, its clean-tree check requires it.
+
 ## Web error-code drift guard (reattached in phase 2)
 
 In phase 1 the drift guard at
