@@ -38,11 +38,12 @@ import type { Runtime } from "../runtime";
 
 export function createCatalogControllers(runtime: Runtime) {
     const r = runtime.repositories;
+    const p = runtime.providers;
 
     return {
         product: new ProductController(
-            new GetAllProductsUseCase(r.product),
-            new GetProductUseCase(r.product),
+            new GetAllProductsUseCase(r.product, p.hold),
+            new GetProductUseCase(r.product, p.hold),
             new CreateProductUseCase(r.product),
             new UpdateProductUseCase(r.product),
             new DeleteProductUseCase(r.product),

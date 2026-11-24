@@ -11,6 +11,10 @@ export interface IProductResponse {
     image: string | null;
     price: number;
     stock: number;
+    /** Active UX holds for this product, supplied by the hold provider. */
+    held: number;
+    /** Never negative: stock minus active holds. */
+    available: number;
     active: boolean;
     ownerId: string;
     tenant?: ITenantMinimalResponse;
@@ -20,7 +24,11 @@ export interface IProductResponse {
 }
 
 export class ProductResponse {
-    static fromEntity(product: Product): IProductResponse {
+    static fromEntity(
+        product: Product,
+        held = 0,
+        available = 0,
+    ): IProductResponse {
         return {
             id: product.id,
             name: product.name,
@@ -28,6 +36,10 @@ export class ProductResponse {
             image: product.image ?? null,
             price: product.price,
             stock: product.stock,
+            // Callers outside the read use cases have no hold data; they keep
+            // seeing a complete DTO with neutral defaults.
+            held,
+            available,
             active: product.active,
             ownerId: product.ownerId,
             tenant: product.tenant

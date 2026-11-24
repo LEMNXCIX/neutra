@@ -42,13 +42,9 @@ export class ProductController {
         const tenantId = tenantIdOf(req);
 
         const result = await this.getAllProductsUseCase.execute(tenantId);
-        return res.json(
-            present(result, (products) =>
-                Array.isArray(products)
-                    ? products.map((p) => ProductResponse.fromEntity(p))
-                    : [],
-            ),
-        );
+        // The use case already presents availability (held/available); mapping
+        // again here would reset those fields to their defaults.
+        return res.json(result);
     }
 
     async getOne(req: Request, res: Response) {
@@ -56,7 +52,7 @@ export class ProductController {
 
         const id = req.params.id;
         const result = await this.getProductUseCase.execute(tenantId, id);
-        return res.json(present(result, ProductResponse.fromEntity));
+        return res.json(result);
     }
 
     async create(req: Request, res: Response) {
