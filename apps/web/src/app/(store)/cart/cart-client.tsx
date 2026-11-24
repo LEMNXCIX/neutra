@@ -1,5 +1,6 @@
 "use client";
 
+import { ErrorCodes } from "@neutra/commons";
 import {
     CreditCard,
     DollarSign,
@@ -30,8 +31,10 @@ import { Input } from "@/components/ui/input";
 import { useCart } from "@/hooks/use-cart";
 import { useFeatures } from "@/hooks/useFeatures";
 import { apiFetch } from "@/lib/api-fetch";
+import { errorMessageFrom, firstErrorCode } from "@/lib/error-messages";
 import { useRouter } from "@/lib/navigation";
-import type { ContextCoupon } from "@/store/cart-store";
+import { useOptionalQueryClient } from "@/lib/optional-query-client";
+import { type ContextCoupon, releaseCartHolds } from "@/store/cart-store";
 
 function getBackendMessage(value: unknown, fallback: string): string {
     if (typeof value === "string" && value.trim()) return value.trim();
@@ -367,6 +370,7 @@ export default function CartClient() {
         subtotal,
     } = useCart();
     const { isFeatureEnabled } = useFeatures();
+    const queryClient = useOptionalQueryClient();
 
     const [address, setAddress] = useState("");
     const [placing, setPlacing] = useState(false);
@@ -421,14 +425,32 @@ export default function CartClient() {
 
             const data = await res.json().catch(() => ({}));
             if (!res.ok) {
-                toast.error(
-                    getBackendMessage(data, "Error al realizar el pedido"),
-                );
+                if (
+                    res.status === 422 &&
+                    firstErrorCode(data) === ErrorCodes.INSUFFICIENT_STOCK
+                ) {
+                    // The atomic decrement rejected the order: show the code's
+                    // existing translated copy and refresh live availability.
+                    toast.error(
+                        errorMessageFrom(
+                            data,
+                            "No hay stock suficiente para algunos productos.",
+                        ),
+                    );
+                    void queryClient.invalidateQueries({
+                        queryKey: ["availability", "product"],
+                    });
+                } else {
+                    toast.error(
+                        getBackendMessage(data, "Error al realizar el pedido"),
+                    );
+                }
                 setPlacing(false);
                 return;
             }
 
             await apiFetch("/api/cart/clear", { method: "DELETE" });
+            await releaseCartHolds();
             await refresh();
             if (coupon) removeCoupon();
 

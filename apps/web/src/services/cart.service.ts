@@ -1,3 +1,4 @@
+import type { AcquireHoldRequest } from "@neutra/commons";
 import { api } from "@/lib/api-client";
 import type { AddToCartDTO, CartItem } from "@/types/cart.types";
 
@@ -42,6 +43,19 @@ export const cartService = {
     clear: async (): Promise<CartItem[]> => {
         return api.delete<CartItem[]>("/cart/clear");
     },
+
+    /**
+     * Acquire a short-lived UX hold on a product before adding it to the cart.
+     * The authoritative stock decrement still happens at order creation.
+     */
+    acquireHold: async (
+        request: AcquireHoldRequest,
+    ): Promise<{ key: string; expiresAt: string }> =>
+        api.post<{ key: string; expiresAt: string }>("/holds", request),
+
+    /** Release a hold owned by this browser (no-op for expired/foreign holds). */
+    releaseHold: async (key: string): Promise<{ released: boolean }> =>
+        api.delete<{ released: boolean }>(`/holds/${encodeURIComponent(key)}`),
 
     /**
      * Get cart statistics (requires authentication)

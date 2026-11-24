@@ -12,3 +12,4 @@ export type {
     ContextCoupon,
     MappedCartItem,
 } from "./tanstack/cart-store";
+export { isOwnProductHold, releaseCartHolds } from "./tanstack/cart-store";

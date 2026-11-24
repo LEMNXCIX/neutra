@@ -1,3 +1,4 @@
+import { holdKey } from "@neutra/commons";
 import { createStore, type Store } from "@tanstack/store";
 import { ApiError } from "@/lib/api-client";
 import { reportError } from "@/lib/error-reporting";
@@ -33,6 +34,8 @@ type CartData = {
     coupon: ContextCoupon;
     discount: number;
     productMap: Record<string, Product>;
+    /** UX holds keyed by product id; TTL is the authoritative backstop. */
+    holdKeys?: Record<string, string>;
 };
 
 type CartActions = {
@@ -208,6 +211,31 @@ export function createCartStore(): CartStore {
                         : partial),
                 }));
 
+            const rememberHold = (productId: string, key: string) => {
+                set((prev) => ({
+                    holdKeys: { ...(prev.holdKeys ?? {}), [productId]: key },
+                }));
+            };
+
+            const forgetHold = (productId: string) => {
+                set((prev) => {
+                    const next = { ...(prev.holdKeys ?? {}) };
+                    delete next[productId];
+                    return { holdKeys: next };
+                });
+            };
+
+            const releaseProductHold = async (productId: string) => {
+                const key = get().holdKeys?.[productId];
+                if (!key) return;
+                forgetHold(productId);
+                try {
+                    await cartService.releaseHold?.(key);
+                } catch {
+                    // UX-only hold: the Redis TTL is the backstop.
+                }
+            };
+
             // Declared as a local first so sibling actions can call it: unlike
             // zustand, TanStack's `get()` returns data only, never the actions.
             const fetchCart = async () => {
@@ -325,6 +353,33 @@ export function createCartStore(): CartStore {
                     }
 
                     set({ loading: true });
+
+                    // Register the key before awaiting so a `hold.acquired`
+                    // SSE event that beats the POST response is still ours.
+                    const tenantId = tenantStore.get().tenantId;
+                    let acquiredKey: string | undefined;
+                    if (tenantId) {
+                        const key = holdKey("product", tenantId, id);
+                        acquiredKey = key;
+                        rememberHold(id, key);
+                        try {
+                            const result = await cartService.acquireHold({
+                                resourceType: "product",
+                                tenantId,
+                                resourceId: id,
+                            });
+                            if (result?.key) {
+                                acquiredKey = result.key;
+                                rememberHold(id, result.key);
+                            }
+                        } catch {
+                            // UX-only: a lost NX race means someone else holds
+                            // it; let the storefront disable the button.
+                            acquiredKey = undefined;
+                            forgetHold(id);
+                        }
+                    }
+
                     try {
                         await cartService.addItem({
                             productId: id,
@@ -334,6 +389,14 @@ export function createCartStore(): CartStore {
                         set({ loading: false });
                         return { success: true };
                     } catch (err) {
+                        if (acquiredKey) {
+                            forgetHold(id);
+                            try {
+                                await cartService.releaseHold?.(acquiredKey);
+                            } catch {
+                                // TTL backstop.
+                            }
+                        }
                         set({ loading: false });
                         return {
                             success: false,
@@ -364,6 +427,7 @@ export function createCartStore(): CartStore {
                         );
                         console.error(message);
                     } finally {
+                        await releaseProductHold(id);
                         set({ loading: false });
                     }
                 },
@@ -443,3 +507,24 @@ export function createCartStore(): CartStore {
 }
 
 export const cartStore = createCartStore();
+
+/** True for a hold this browser acquired, so SSE can ignore its own echoes. */
+export function isOwnProductHold(key: string): boolean {
+    return Object.values(cartStore.get().holdKeys ?? {}).includes(key);
+}
+
+/** Release every product hold still owned by this browser (post-checkout). */
+export async function releaseCartHolds(): Promise<void> {
+    const keys = Object.values(cartStore.get().holdKeys ?? {});
+    if (keys.length === 0) return;
+    cartStore.setState((prev) => ({ ...prev, holdKeys: {} }));
+    await Promise.all(
+        keys.map(async (key) => {
+            try {
+                await cartService.releaseHold?.(key);
+            } catch {
+                // UX-only hold: the Redis TTL is the backstop.
+            }
+        }),
+    );
+}

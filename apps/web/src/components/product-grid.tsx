@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useCart } from "@/hooks/use-cart";
+import { useProductAvailability } from "@/hooks/use-product-availability";
 
 type Product = {
     id: string;
@@ -30,6 +31,65 @@ const GRID_COLUMNS = {
 } as const;
 const GRID_ROW_HEIGHT = 520;
 const LIST_ROW_HEIGHT = 400;
+
+/**
+ * One hook instance per card: the API's `available` (stock minus active holds)
+ * drives the button, and a foreign `hold.acquired` SSE event explains why the
+ * button is temporarily unavailable. The hold is UX-only; the server's atomic
+ * order decrement stays authoritative.
+ */
+function AddToCartButton({
+    product,
+    loading,
+    onAdd,
+    className,
+    size,
+}: {
+    product: Product;
+    loading: boolean;
+    onAdd: (id: string, title: string) => void;
+    className: string;
+    size?: "lg";
+}) {
+    const { available, heldByOther } = useProductAvailability({
+        productId: product.id,
+        fallbackStock: product.stock,
+    });
+    const inStock = (available ?? 0) > 0;
+
+    return (
+        <Button
+            onClick={() => onAdd(product.id, product.title)}
+            disabled={loading || !inStock || heldByOther}
+            data-add-state={
+                heldByOther
+                    ? "held-by-other"
+                    : inStock
+                      ? "available"
+                      : "out-of-stock"
+            }
+            className={className}
+            size={size}
+        >
+            {loading ? (
+                <div className="flex items-center gap-2">
+                    <Loader2 className="size-4 animate-spin" />
+                    <span>Procesando</span>
+                </div>
+            ) : heldByOther ? (
+                <div className="flex items-center gap-2">
+                    <ShoppingCart className="size-4" />
+                    <span>lo está agregando otro usuario</span>
+                </div>
+            ) : (
+                <div className="flex items-center gap-2">
+                    <ShoppingCart className="size-4" />
+                    <span>Agregar al Carrito</span>
+                </div>
+            )}
+        </Button>
+    );
+}
 
 function useGridColumns(): number {
     // Start at the SSR-safe value and correct it after mount to avoid a
@@ -184,29 +244,12 @@ export default function ProductGrid({
                                     </div>
 
                                     <div className="flex flex-wrap items-center gap-4">
-                                        <Button
-                                            onClick={() =>
-                                                handleAdd(p.id, p.title)
-                                            }
-                                            disabled={
-                                                loadingId === p.id || !inStock
-                                            }
+                                        <AddToCartButton
+                                            product={p}
+                                            loading={loadingId === p.id}
+                                            onAdd={handleAdd}
                                             className="h-14 px-10 bg-foreground text-background hover:bg-foreground/90 font-bold uppercase tracking-widest text-[11px] rounded-xl shadow-xl shadow-foreground/10 transition-[color,background-color,border-color,box-shadow,opacity,transform] active:scale-95"
-                                        >
-                                            {loadingId === p.id ? (
-                                                <div className="flex items-center gap-2">
-                                                    <Loader2 className="size-4 animate-spin" />
-                                                    <span>Procesando</span>
-                                                </div>
-                                            ) : (
-                                                <div className="flex items-center gap-2">
-                                                    <ShoppingCart className="size-4" />
-                                                    <span>
-                                                        Agregar al Carrito
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </Button>
+                                        />
                                         <Button
                                             variant="outline"
                                             asChild
@@ -323,30 +366,13 @@ export default function ProductGrid({
                                             </div>
                                         </div>
 
-                                        <Button
-                                            onClick={() =>
-                                                handleAdd(p.id, p.title)
-                                            }
-                                            disabled={
-                                                loadingId === p.id || !inStock
-                                            }
+                                        <AddToCartButton
+                                            product={p}
+                                            loading={loadingId === p.id}
+                                            onAdd={handleAdd}
                                             className="w-full h-14 bg-foreground text-background hover:bg-foreground/90 font-bold uppercase tracking-widest text-[11px] rounded-xl transition-[color,background-color,border-color,box-shadow,opacity,transform] shadow-xl shadow-foreground/5"
                                             size="lg"
-                                        >
-                                            {loadingId === p.id ? (
-                                                <div className="flex items-center gap-2">
-                                                    <Loader2 className="size-4 animate-spin" />
-                                                    <span>Procesando</span>
-                                                </div>
-                                            ) : (
-                                                <div className="flex items-center gap-2">
-                                                    <ShoppingCart className="size-4" />
-                                                    <span>
-                                                        Agregar al Carrito
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </Button>
+                                        />
                                     </div>
                                 </CardContent>
                             </Card>
