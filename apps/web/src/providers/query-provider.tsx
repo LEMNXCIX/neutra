@@ -53,9 +53,11 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
     }, [queryClient]);
 
     // A Strapi publish is an HTTP webhook on the server, so the browser needs
-    // a delivery channel: the custom server entry exposes an SSE feed and every
-    // event invalidates this client's queries. Guarded so node/happy-dom tests
-    // (no EventSource) are unaffected.
+    // a delivery channel: the custom server entry exposes an SSE feed. Only
+    // legacy `content:` messages trigger a global invalidateQueries(); typed
+    // hold events go to notifyAvailabilityEvent plus a scoped
+    // invalidateAvailability on ["availability", <type>, <tenantId>]. Guarded
+    // so node/happy-dom tests (no EventSource) are unaffected.
     useEffect(() => {
         if (typeof EventSource === "undefined") return;
         const source = new EventSource("/api/revalidate/events");

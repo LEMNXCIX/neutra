@@ -63,6 +63,11 @@ services:
       - NODE_ENV=${NODE_ENV:-production}
       - PORT=3001
       - BACKEND_API_URL=${BACKEND_API_URL:-http://app:3000/api}
+      # The web server's Redis subscriber bridges hold events into the SSE feed;
+      # without these it falls back to localhost:6379 (no cross-container events).
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
     ports:
       - "${WEB_PORT:-3001}:3001"
     depends_on:

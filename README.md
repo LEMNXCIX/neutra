@@ -87,10 +87,11 @@ failures, and the DoD gate does not try to "fix" them:
 
 1. **`npm.audit` reports WARN in the `ci` doctor profile.** The doctor shells
    out to `bun audit --json`, which carries no `fixAvailable` metadata, so the
-   23 real advisories (13 high, 1 critical) are classified as "without a
-   non-breaking fix" and the check reports WARN rather than FAIL. This is
-   accepted: the gate still blocks on registry/unverifiable failures, no
-   dependency is upgraded, and no blocking check is suppressed.
+   22 remaining advisories are classified as "without a non-breaking fix" and
+   the check reports WARN rather than FAIL. This is accepted: the gate still
+   blocks on registry/unverifiable failures, no dependency is upgraded, and no
+   blocking check is suppressed. The critical `xmldom` advisory was removed in
+   the debt-remediation plan; see the final debt status below.
 2. **Tenant smoke proves router reachability, not subdomain resolution.** The
    smoke runs against the root host and hits the non-static SSE route
    `/api/revalidate/events` (asserting HTTP 200) plus a separate static
@@ -137,21 +138,67 @@ routing plus that refetch; SSE authentication is deliberately unchanged. The
 `x-tenant-slug` / `x-tenant-id` headers sent by the smoke and the BFF are
 identity hints only — tenant identity is derived from the Host.
 
-**Restock debt (D8 — accepted, not remediated in this cut).** There is no
-`restock` flow: holds expire through Redis TTL and are never turned into stock
-movements, and cancelling an order does not return units to `Product.stock`.
-`held` and `available` are a UX projection (`available = max(0, stock − active
-holds)`); they are not a committed inventory reservation. Emitting
-`stock.changed` from real stock mutations and restocking on cancellation are
-explicit follow-up work — no stock ledger, restock job or production behaviour
-was introduced to make this gate pass. `scripts/verify-availability-dod.mjs`
-records the eight acceptance checks for this cut (including a clean tree, so
-run it after committing).
+The compose `web` service now passes `REDIS_HOST`, `REDIS_PORT` and
+`REDIS_PASSWORD` (defaults `redis`, `6379`, empty) to the web server so its
+subscriber reaches the compose Redis in dev; without them it falls back to
+`localhost:6379` and hold events do not cross the container boundary (boot is
+fine — the 30s availability refetch is the safety net).
+`scripts/verify-web-ci.mjs` guards against this wiring regressing.
 
-## Follow-ups
+**Restock (D8 — closed in this plan).** Cancelling a `PENDIENTE` order now moves
+it to terminal `CANCELADO` and returns each item's `amount` to `Product.stock`
+and decrements the coupon's `usageCount` inside the same compare-and-set
+transaction, so a double cancellation cannot double-restock. `held` and
+`available` are still a UX projection (`available = max(0, stock − active
+holds)`), not a committed inventory reservation. Cancellation from
+`PAGADO`/`ENVIADO`/`ENTREGADO`, loyalty reversal and refunds remain out of
+scope (accepted). `scripts/verify-availability-dod.mjs` records the eight
+acceptance checks for the availability cut (including a clean tree, so run it
+after committing).
 
-- **Security debt (accepted WARN, not remediated here).** `npm.audit` in the
-  `ci` doctor profile reports **23 advisories (1 critical, 13 high)**. Per
-  accepted ruling T6 it stays WARN: no dependency is upgraded and no blocking
-  check is suppressed. Dependency remediation is a separate, tracked task —
-  recorded here so the WARN does not become invisible debt.
+## Debt status after this plan
+
+**Closed in the debt-remediation plan** (design:
+`docs/superpowers/specs/2026-11-25-debt-remediation-design.md`):
+
+- **`xmldom` critical** — the unused Twitter OAuth strategy and
+  `passport-twitter` were removed; no `xmldom@0.1.31` in the lockfile and no
+  critical advisory.
+- **Header-based tenant spoofing** — `TENANT_TRUST_HOST_ONLY` adds an optional
+  Host-only resolution mode (see below).
+- **Restock** — `PENDIENTE → CANCELADO` returns stock and reverts coupon usage
+  idempotently in the same transaction.
+- **`hold.expired`** — Redis keyspace notifications (`Ex`) plus a dedicated
+  subscriber publish real TTL expirations; at-most-once, no replay.
+- **Graceful shutdown** — `SIGTERM`/`SIGINT` close the HTTP server, both Redis
+  clients and the workers/queues.
+- **Types and stock defaults** — `available = stock` by default; the web
+  consumes `IProductResponse` from `@neutra/commons` without local casts.
+- **Route generator** — the API route manifest is seeded from disk, so deleting
+  a generated route shrinks it.
+- **Redis env and SSE comment** — the compose `web` service passes `REDIS_*`
+  and the `query-provider.tsx` comment now distinguishes legacy global
+  invalidation from typed, scoped availability invalidation.
+
+**Accepted and left out of scope** (recorded, not silently dropped):
+
+- `npm.audit` still reports **WARN for 22 advisories** in the `ci` doctor
+  profile (transitive/exact-pinned; no `fixAvailable`, no safe semver bump).
+  Per accepted ruling T6 nothing is upgraded and no blocking check is
+  suppressed; this is tracked as separate dependency work.
+- Multi-replica SSE: one in-process Redis subscriber per replica, so delivery
+  still relies on sticky routing plus the 30s availability refetch.
+- SSE authentication is unchanged; the feed is a UX notification, not an
+  authorization boundary.
+- Refunds, loyalty reversal and cancellation past `PENDIENTE` are not
+  implemented.
+
+### `TENANT_TRUST_HOST_ONLY` is production-only
+
+`TENANT_TRUST_HOST_ONLY` defaults to `false`. When set to `true`, tenant
+resolution ignores `x-tenant-id` / `x-tenant-slug` and cookies and derives the
+tenant solely from the request `Host`. It is intended for **production**
+hardening only. It is deliberately **not set in CI**
+(`.github/workflows/CI.yml`): the API integration suites authenticate with
+`x-tenant-slug` headers by design, and the Host-only mode is covered by the
+unit suite instead. See `apps/api/.env.example`.

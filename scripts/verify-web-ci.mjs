@@ -96,6 +96,33 @@ for (const name of ["Dockerfile", "Dockerfile.dev"]) {
     );
 }
 
+// --- Redis env wiring for the web SSE subscriber ---------------------------
+// The web server runs a Redis subscriber that bridges hold events into the
+// tenant-scoped SSE feed. Without REDIS_* on the compose `web` service it falls
+// back to localhost:6379, so hold events never cross the container boundary
+// (boot is fine; the 30s availability refetch is the only safety net). Scope
+// the check to the `web` block: the `app` service already declares REDIS_HOST.
+const composePath = join(root, "apps", "api", "docker-compose.yml");
+const compose = readFileSync(composePath, "utf8");
+const webHeading = /^  web:[ \t]*$/m.exec(compose);
+check(
+    webHeading !== null,
+    "apps/api/docker-compose.yml must define a `web` service",
+);
+if (webHeading) {
+    const afterWeb = compose.slice(webHeading.index + webHeading[0].length);
+    const nextService = /^  [a-zA-Z][\w-]*:[ \t]*$/m.exec(afterWeb);
+    const webService = nextService
+        ? afterWeb.slice(0, nextService.index)
+        : afterWeb;
+    for (const name of ["REDIS_HOST", "REDIS_PORT"]) {
+        check(
+            new RegExp(`\\b${name}\\s*[=:]`).test(webService),
+            `web service in apps/api/docker-compose.yml must declare ${name}`,
+        );
+    }
+}
+
 // --- Forbidden patterns ---------------------------------------------------
 check(
     !/\bnpm ci\b/.test(ci),
@@ -146,6 +173,6 @@ if (failures.length > 0) {
 console.log(
     "PASS: verify-web-ci — web typecheck/test/build steps, contract duplication " +
         "guard, tenant smoke (static artifact + non-static router path), " +
-        "Node 22 runtime, bun-only installer, CMS exclusion and build " +
-        "ordering all present",
+        "Node 22 runtime, bun-only installer, web compose REDIS_HOST/REDIS_PORT, " +
+        "CMS exclusion and build ordering all present",
 );
