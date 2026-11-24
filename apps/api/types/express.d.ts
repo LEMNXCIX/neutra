@@ -14,6 +14,8 @@ declare global {
                 active: boolean;
             };
             traceId?: string;
+            /** Anonymous UX identity from the `hold_owner` cookie. */
+            holdOwnerId?: string;
             validatedBody?: unknown;
             validatedQuery?: unknown;
         }

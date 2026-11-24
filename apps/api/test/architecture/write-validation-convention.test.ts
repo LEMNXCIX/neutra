@@ -213,6 +213,10 @@ const UNWIRED_WRITE_ROUTES: ReadonlyArray<{ route: string; reason: string }> = [
         reason: "bodyless: reads the path param only",
     },
     {
+        route: "infrastructure/routes/holds.routes.ts DELETE /:key",
+        reason: "bodyless: reads the key and the cookie-derived owner only",
+    },
+    {
         route: "infrastructure/routes/loyalty.routes.ts POST /me/campaigns/:campaignId/claim",
         reason: "bodyless: campaignId and the identity only",
     },
@@ -288,9 +292,9 @@ describe("case 6 — every body-taking write route carries a validateDto", () =>
     });
 
     test("the unwired list is exactly as long as it claims to be", () => {
-        // 25 entries. Pinned so a route cannot be added and quietly skipped:
+        // 26 entries. Pinned so a route cannot be added and quietly skipped:
         // the count has to be moved in the same commit that adds a route.
-        expect(UNWIRED_WRITE_ROUTES).toHaveLength(25);
+        expect(UNWIRED_WRITE_ROUTES).toHaveLength(26);
     });
 
     test("every unwired entry gives a reason, and no body-reading handler is among them", () => {

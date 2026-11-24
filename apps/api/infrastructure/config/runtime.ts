@@ -1,4 +1,8 @@
+import { createClient } from "redis";
 import { checkDatabaseConnection, prisma } from "@/config/db.config";
+import config from "@/config/index.config";
+import { AcquireHoldUseCase } from "@/core/application/availability/acquire-hold.use-case";
+import { ReleaseHoldUseCase } from "@/core/application/availability/release-hold.use-case";
 import { ResolveAuthenticatedUserUseCase } from "@/core/application/auth/resolve-authenticated-user.use-case";
 import { SweepAppointmentReviewsUseCase } from "@/core/application/booking/sweep-appointment-reviews.use-case";
 import { SendNotificationUseCase } from "@/core/application/whatsapp/send-notification.use-case";
@@ -30,7 +34,9 @@ import { JwtProvider } from "../providers/jwt.provider";
 import { NodeCryptoProvider } from "../providers/node-crypto.provider";
 import { PinoLoggerProvider } from "../providers/pino-logger.provider";
 import { PushProvider } from "../providers/push.provider";
+import { RedisHoldProvider } from "../providers/redis-hold.provider";
 import { RedisProvider } from "../providers/redis.provider";
+import { RedisPubSubProvider } from "../providers/redis-pubsub.provider";
 import { UuidProvider } from "../providers/uuid.provider";
 import { WhatsAppProvider } from "../providers/whatsapp.provider";
 import { createEmailService } from "../services/email.service";
@@ -76,6 +82,21 @@ export function createRuntime() {
     };
 
     const logger = new PinoLoggerProvider();
+    // Holds and pub/sub need Redis commands the cache provider does not expose
+    // (SET NX, MGET, PUBLISH). One dedicated client serves both adapters.
+    const availabilityClient = createClient({
+        url: `redis://${config.redisHost || "localhost"}:${config.redisPort || 6379}`,
+        password: config.redisPassword,
+    });
+    availabilityClient.on("error", (err) =>
+        logger.error("Availability Redis Client Error", err),
+    );
+    void availabilityClient.connect().catch((err) => {
+        logger.error("Failed to connect availability Redis", err);
+    });
+    const hold = new RedisHoldProvider(availabilityClient);
+    const eventBus = new RedisPubSubProvider(availabilityClient);
+
     const providers = {
         config: new EnvConfigProvider(),
         logger,
@@ -83,11 +104,15 @@ export function createRuntime() {
         tokenGenerator: new JwtProvider(),
         queue: new BullMQQueueProvider(queues.notification),
         cache: new RedisProvider(logger),
+        hold,
+        eventBus,
         uid: new UuidProvider(),
         crypto: new NodeCryptoProvider(),
     };
 
     const useCases = {
+        acquireHold: new AcquireHoldUseCase(hold, eventBus),
+        releaseHold: new ReleaseHoldUseCase(hold, eventBus),
         resolveAuthenticatedUser: new ResolveAuthenticatedUserUseCase(
             providers.tokenGenerator,
             repositories.user,

@@ -19,6 +19,7 @@ import category from "@/infrastructure/routes/category.routes";
 import coupon from "@/infrastructure/routes/coupon.routes";
 import features from "@/infrastructure/routes/feature.routes";
 import healthRoutes from "@/infrastructure/routes/health.routes";
+import holds from "@/infrastructure/routes/holds.routes";
 import logRoutes from "@/infrastructure/routes/log.routes";
 import loyaltyRoutes from "@/infrastructure/routes/loyalty.routes";
 import order from "@/infrastructure/routes/order.routes";
@@ -157,6 +158,9 @@ tenants(app, controllers.tenant, authenticate);
 
 // Tenant resolution for /api/* (before authenticated business routes)
 app.use(tenantMiddleware);
+
+// Generic hold routes need the Host-derived tenant from tenantMiddleware.
+holds(app, controllers.holds);
 
 // Domain routes (composition root)
 auth(app, controllers.auth, authenticate, joinTenantAuthenticate);

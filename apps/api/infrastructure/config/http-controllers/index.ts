@@ -1,3 +1,4 @@
+import { HoldsController } from "@/interface-adapters/controllers/holds.controller";
 import type { Runtime } from "../runtime";
 import { createBookingControllers } from "./booking.controllers";
 import { createCatalogControllers } from "./catalog.controllers";
@@ -9,6 +10,10 @@ import { createOperationsControllers } from "./operations.controllers";
 export function createHttpControllers(runtime: Runtime) {
     return {
         ...createIdentityControllers(runtime),
+        holds: new HoldsController(
+            runtime.useCases.acquireHold,
+            runtime.useCases.releaseHold,
+        ),
         ...createCatalogControllers(runtime),
         ...createCommerceControllers(runtime),
         ...createBookingControllers(runtime),

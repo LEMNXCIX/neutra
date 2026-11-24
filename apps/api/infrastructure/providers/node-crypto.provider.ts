@@ -5,4 +5,8 @@ export class NodeCryptoProvider implements ICryptoProvider {
     randomBytes(size: number): string {
         return crypto.randomBytes(size).toString("hex");
     }
+
+    randomUUID(): string {
+        return crypto.randomUUID();
+    }
 }
