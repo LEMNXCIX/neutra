@@ -35,9 +35,9 @@ jobs:
       # non-static router path /api/revalidate/events plus a separate static
       # /icon.svg artifact check, and the parity suite mocks every backend call.
       BACKEND_API_URL: http://localhost:4001/api
-      # Reject client-supplied tenant headers/cookies: identity must come from
-      # Host, matching what the web BFF overwrites on every request.
-      TENANT_TRUST_HOST_ONLY: "true"
+      # TENANT_TRUST_HOST_ONLY is intentionally NOT set in CI: it is a
+      # production-only hardening flag. The API integration suites authenticate
+      # with x-tenant-slug headers by design; Host-only is covered by unit tests.
       # docker-compose.prod.yml declares these five with `:?`, and the API
       # doctor's blocking `docker.compose` check validates both compose files.
       # The CMS is excluded from the root build, so throwaway values are enough

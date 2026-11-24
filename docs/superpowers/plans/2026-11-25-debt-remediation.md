@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Quitar `passport-twitter` (critical `xmldom`); los otros 3 OAuth strategies NO se tocan.
-- `TENANT_TRUST_HOST_ONLY` default `false`; cuando `true`, el tenant se resuelve **solo** desde `Host`.
+- `TENANT_TRUST_HOST_ONLY` default `false`; cuando `true`, el tenant se resuelve **solo** desde `Host`. Activarlo solo en producción, nunca en CI.
 - Restock SOLO `PENDIENTE → CANCELADO`; `CANCELADO` terminal; revierte cupón; SIN lealtad ni reembolsos.
 - `hold.expired` vía Redis keyspace notifications `Ex` + subscriber dedicado; at-most-once, sin replay.
 - Guards en verde: `check:arch`, R1–R11, `commons:check`, `verify-web-contracts.mjs`, `verify-dod` 7/7, `verify-web-dod` 7/7, `verify-availability-dod` 8/8.
@@ -100,9 +100,9 @@ bun run check:arch && bun run doctor:api
 
 Expected: tests en verde; guards sin cambios.
 
-- [ ] **Step 5: Habilitar en CI y documentar**
+- [ ] **Step 5: Documentar (solo producción, NO CI)**
 
-Añadir `TENANT_TRUST_HOST_ONLY: "true"` al job env de `.github/workflows/CI.yml` y una línea comentada en `.env.example` con el default `false`. Commit: `git add -A && git commit -m "feat(api): add host-only tenant resolution mode"`
+Añadir una línea comentada en `.env.example` con el default `false`, recomendando activar el flag solo en producción. **NO añadir `TENANT_TRUST_HOST_ONLY` al job env de `.github/workflows/CI.yml`**: las suites de integración de la API autentican con `x-tenant-slug` por diseño (test-client.ts) y el modo Host-only ya está cubierto por el test unitario; activarlo en CI rompería el gate sin aportar seguridad. Commit: `git add -A && git commit -m "feat(api): add host-only tenant resolution mode"`
 
 ---
 
@@ -351,7 +351,7 @@ Expected: verificador PASS; compose válido; web tests verdes.
 
 - [ ] **Step 1: Escribir el verificador**
 
-`verify-debt-remediation.mjs`: asertar (1) `passport-twitter` ausente de package.json y lock, 0 advisories de xmldom en `bun audit --json`; (2) `TENANT_TRUST_HOST_ONLY` en config, middleware y CI; (3) `CANCELADO` en los 3 sitios + migración; (4) `hold.expired` publicado por el subscriber + `notify-keyspace-events Ex` en compose; (5) `runtime.close()` con SIGTERM/SIGINT; (6) `available: product.stock` default y sin `ProductStock` local; (7) generador sin siembra desde manifest; (8) git status limpio.
+`verify-debt-remediation.mjs`: asertar (1) `passport-twitter` ausente de package.json y lock, 0 advisories de xmldom en `bun audit --json`; (2) `TENANT_TRUST_HOST_ONLY` en config y middleware, documentado como producción-only en `.env.example` y ausente del job env de CI; (3) `CANCELADO` en los 3 sitios + migración; (4) `hold.expired` publicado por el subscriber + `notify-keyspace-events Ex` en compose; (5) `runtime.close()` con SIGTERM/SIGINT; (6) `available: product.stock` default y sin `ProductStock` local; (7) generador sin siembra desde manifest; (8) git status limpio.
 
 - [ ] **Step 2: Ejecutar la batería completa**
 

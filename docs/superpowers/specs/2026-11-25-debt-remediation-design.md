@@ -45,11 +45,11 @@ Se triaron con evidencia las deudas documentadas al cierre de la feature de disp
 - Nota: los otros tres strategies (Google/Facebook/GitHub) tampoco tienen llamadores, pero **no se tocan** — fuera de alcance.
 
 ### 3.2 Modo Host-only en tenant middleware
-- Nueva clave de config (ej. `TENANT_TRUST_HOST_ONLY`, default `false` para no romper despliegues actuales; `true` en CI/producción).
+- Nueva clave de config (ej. `TENANT_TRUST_HOST_ONLY`, default `false` para no romper despliegues actuales; `true` **solo en producción**, nunca en CI).
 - En `tenant.middleware.ts`, cuando el flag está activo: ignorar `x-tenant-id`/`x-tenant-slug` y cookies, resolver **solo** desde `Host` (extractSubdomain).
 - El BFF (`tenant-request.ts:198-221`) ya reinyerta headers desde Host, así que el cambio es compatible con el flujo normal.
 - Tests: con flag off, comportamiento actual (test existente `tenant.middleware.test.ts:82-93` sigue verde); con flag on, un request con header forjado resuelve el tenant del Host.
-- Habilitar el flag en `.env.example` como recomendado para producción y en CI.
+- Documentar el flag en `.env.example` como recomendado para producción. **NO habilitarlo en CI**: las suites de integración de la API autentican con `x-tenant-slug` por diseño (test-client.ts) y el modo Host-only ya está cubierto por el test unitario; activarlo en CI rompería el gate sin aportar seguridad.
 
 ## 4. Fase 2 — Comportamiento
 
