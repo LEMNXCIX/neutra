@@ -64,11 +64,23 @@ export type AppointmentReviewCandidateQuery = {
 };
 
 /**
+ * Opaque handle for an in-flight persistence transaction. The port cannot
+ * import `@prisma/client` (core must stay framework-free), so the Prisma
+ * adapter supplies its `TransactionClient` here and callers only pass it back
+ * to this repository.
+ */
+export type AppointmentRepositoryTransaction = object;
+
+/**
  * Appointment Repository Interface
  * Defines operations for Appointment persistence
  */
 export interface IAppointmentRepository {
-    create(tenantId: string, data: AppointmentCreateData): Promise<Appointment>;
+    create(
+        tenantId: string,
+        data: AppointmentCreateData,
+        tx?: AppointmentRepositoryTransaction,
+    ): Promise<Appointment>;
     findById(
         tenantId: string,
         id: string,
@@ -116,6 +128,18 @@ export interface IAppointmentRepository {
     ): Promise<boolean>;
     delete(tenantId: string, id: string): Promise<void>;
 
+    /**
+     * Serializes slot creation for a tenant/staff/date key. The callback runs
+     * inside one transaction; pass the received `tx` to `checkAvailability`
+     * and `create` so the re-check and the write share the same lock.
+     */
+    withSlotLock<T>(
+        tenantId: string,
+        staffId: string,
+        startTime: Date,
+        fn: (tx: AppointmentRepositoryTransaction) => Promise<T>,
+    ): Promise<T>;
+
     // Availability checking
     checkAvailability(
         tenantId: string,
@@ -123,5 +147,6 @@ export interface IAppointmentRepository {
         startTime: Date,
         endTime: Date,
         excludeAppointmentId?: string,
+        tx?: AppointmentRepositoryTransaction,
     ): Promise<boolean>;
 }

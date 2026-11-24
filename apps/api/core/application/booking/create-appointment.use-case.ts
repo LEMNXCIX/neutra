@@ -17,6 +17,7 @@ import {
 import type { IQueueProvider } from "@/core/providers/queue-provider.interface";
 import type {
     AppointmentCreateData,
+    AppointmentRepositoryTransaction,
     IAppointmentRepository,
 } from "@/core/repositories/appointment.repository.interface";
 import type { ICouponRepository } from "@/core/repositories/coupon.repository.interface";
@@ -134,63 +135,95 @@ export class CreateAppointmentUseCase {
             }
         }
 
-        const isAvailable = await this.appointmentRepository.checkAvailability(
-            tenantId,
-            data.staffId,
-            startTime,
-            endTime,
-        );
+        const reserveSlot = async (tx?: AppointmentRepositoryTransaction) => {
+            // The re-check and the write must use the same locked transaction.
+            const isAvailable = tx
+                ? await this.appointmentRepository.checkAvailability(
+                      tenantId,
+                      data.staffId,
+                      startTime,
+                      endTime,
+                      undefined,
+                      tx,
+                  )
+                : await this.appointmentRepository.checkAvailability(
+                      tenantId,
+                      data.staffId,
+                      startTime,
+                      endTime,
+                  );
 
-        if (!isAvailable) {
-            throw new InvalidStateError(
-                "The selected time slot is already booked",
-            );
-        }
-
-        let couponId: string | undefined;
-        let discountAmount = 0;
-        const subtotal = service.price;
-        let total = service.price;
-
-        if (data.couponCode) {
-            const validationResult = await this.validateCouponUseCase.execute(
-                tenantId,
-                {
-                    code: data.couponCode,
-                    orderTotal: service.price,
-                    serviceIds: [service.id],
-                },
-                data.userId,
-            );
-
-            if (!validationResult.success || !validationResult.data?.valid) {
-                throw new BusinessRuleViolationError(
-                    validationResult.message ||
-                        "The provided coupon is invalid",
-                    BusinessErrorCodes.INVALID_COUPON,
+            if (!isAvailable) {
+                throw new InvalidStateError(
+                    "The selected time slot is already booked",
                 );
             }
 
-            couponId = validationResult.data.coupon!.id;
-            discountAmount = validationResult.data.discountAmount || 0;
-            total = subtotal - discountAmount;
-            if (total < 0) total = 0;
-        }
+            let couponId: string | undefined;
+            let discountAmount = 0;
+            const subtotal = service.price;
+            let total = service.price;
 
-        const baseData: AppointmentCreateData = { ...data };
-        const appointmentData = {
-            ...baseData,
-            statusChangedById: actorId ?? data.userId,
-            couponId,
-            discountAmount,
-            subtotal,
-            total,
+            if (data.couponCode) {
+                const validationResult =
+                    await this.validateCouponUseCase.execute(
+                        tenantId,
+                        {
+                            code: data.couponCode,
+                            orderTotal: service.price,
+                            serviceIds: [service.id],
+                        },
+                        data.userId,
+                    );
+
+                if (
+                    !validationResult.success ||
+                    !validationResult.data?.valid
+                ) {
+                    throw new BusinessRuleViolationError(
+                        validationResult.message ||
+                            "The provided coupon is invalid",
+                        BusinessErrorCodes.INVALID_COUPON,
+                    );
+                }
+
+                couponId = validationResult.data.coupon!.id;
+                discountAmount = validationResult.data.discountAmount || 0;
+                total = subtotal - discountAmount;
+                if (total < 0) total = 0;
+            }
+
+            const baseData: AppointmentCreateData = { ...data };
+            const appointmentData = {
+                ...baseData,
+                statusChangedById: actorId ?? data.userId,
+                couponId,
+                discountAmount,
+                subtotal,
+                total,
+            };
+
+            return tx
+                ? this.appointmentRepository.create(
+                      tenantId,
+                      appointmentData,
+                      tx,
+                  )
+                : this.appointmentRepository.create(tenantId, appointmentData);
         };
 
-        const appointment = await this.appointmentRepository.create(
-            tenantId,
-            appointmentData,
-        );
+        // The Prisma adapter always provides withSlotLock. Older test doubles
+        // may not, so they keep their unlocked behaviour without changing the
+        // production path.
+        const hasSlotLock = Boolean(this.appointmentRepository.withSlotLock);
+        const appointment = hasSlotLock
+            ? await this.appointmentRepository.withSlotLock(
+                  tenantId,
+                  data.staffId,
+                  startTime,
+                  reserveSlot,
+              )
+            : await reserveSlot();
 
         const features =
             await this.featureRepository.getTenantFeatureStatus(tenantId);

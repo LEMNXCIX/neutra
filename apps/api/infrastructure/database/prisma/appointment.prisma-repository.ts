@@ -30,6 +30,7 @@ import {
 import type {
     AppointmentCreateData,
     AppointmentFilters,
+    AppointmentRepositoryTransaction,
     AppointmentReviewCandidate,
     AppointmentReviewCandidateQuery,
     AppointmentStatusUpdate,
@@ -165,8 +166,12 @@ export class PrismaAppointmentRepository implements IAppointmentRepository {
     async create(
         tenantId: string,
         data: AppointmentCreateData,
+        tx?: AppointmentRepositoryTransaction,
     ): Promise<Appointment> {
-        const service = await prisma.service.findUnique({
+        // A slot lock hands us its transaction client; standalone callers get
+        // the shared client. Reads and writes below use the same one.
+        const client = (tx ?? prisma) as Prisma.TransactionClient;
+        const service = await client.service.findUnique({
             where: { id: data.serviceId },
             select: { duration: true },
         });
@@ -200,124 +205,119 @@ export class PrismaAppointmentRepository implements IAppointmentRepository {
         ) => client.appointment.create({ data: values });
 
         const couponId = data.couponId;
+        const redeemCoupon = async (couponTx: Prisma.TransactionClient) => {
+            const coupon = await couponTx.coupon.findFirst({
+                where: { id: couponId, tenantId },
+            });
+            if (!coupon) {
+                throw new EntityNotFoundError("Coupon", couponId as string);
+            }
+            assertCouponRedeemable(toRedeemableCoupon(coupon), data.userId);
+            if (
+                coupon.applicableServices.length > 0 &&
+                !coupon.applicableServices.includes(data.serviceId)
+            ) {
+                throw new BusinessRuleViolationError(
+                    "Coupon not applicable to this service",
+                );
+            }
+            if (
+                coupon.applicableServices.length === 0 &&
+                (coupon.applicableProducts.length > 0 ||
+                    coupon.applicableCategories.length > 0)
+            ) {
+                throw new BusinessRuleViolationError(
+                    "Coupon is only applicable to products",
+                );
+            }
+
+            const service = await couponTx.service.findFirst({
+                where: { id: data.serviceId, tenantId },
+                select: { price: true },
+            });
+            if (!service) {
+                throw new EntityNotFoundError("Service", data.serviceId);
+            }
+            const subtotal = new Prisma.Decimal(service.price);
+            if (
+                coupon.minPurchaseAmount !== null &&
+                subtotal.lessThan(coupon.minPurchaseAmount)
+            ) {
+                throw new BusinessRuleViolationError(
+                    `Minimum purchase amount of $${coupon.minPurchaseAmount} required`,
+                );
+            }
+
+            let discountAmount =
+                coupon.type === "PERCENT"
+                    ? subtotal.mul(coupon.value).div(100)
+                    : new Prisma.Decimal(coupon.value);
+            if (
+                coupon.maxDiscountAmount !== null &&
+                discountAmount.greaterThan(coupon.maxDiscountAmount)
+            ) {
+                discountAmount = new Prisma.Decimal(coupon.maxDiscountAmount);
+            }
+            if (discountAmount.greaterThan(subtotal)) {
+                discountAmount = subtotal;
+            }
+            const total = subtotal.minus(discountAmount);
+            const appointmentData = {
+                ...baseAppointmentData,
+                discountAmount: discountAmount.toNumber(),
+                subtotal: subtotal.toNumber(),
+                total: total.toNumber(),
+            };
+
+            const couponsEnabled = await couponTx.tenantFeature.findFirst({
+                where: {
+                    tenantId,
+                    enabled: true,
+                    feature: { key: "COUPONS" },
+                },
+                select: { id: true },
+            });
+            assertCouponsFeatureEnabled(couponsEnabled !== null);
+
+            const usage = await couponTx.coupon.updateMany({
+                where: {
+                    id: coupon.id,
+                    tenantId,
+                    usageCount: coupon.usageCount,
+                    usageLimit: coupon.usageLimit,
+                    updatedAt: coupon.updatedAt,
+                    active: true,
+                    expiresAt: { gt: new Date() },
+                    isLoyaltyTemplate: false,
+                    ...(coupon.isReward
+                        ? {
+                              ownerId: data.userId,
+                              isReward: true,
+                          }
+                        : {
+                              isReward: false,
+                              OR: [{ ownerId: null }, { ownerId: data.userId }],
+                          }),
+                },
+                data: { usageCount: { increment: 1 } },
+            });
+            if (usage.count === 0) {
+                throw new BusinessRuleViolationError(
+                    "The coupon is not available for this appointment",
+                    BusinessErrorCodes.COUPON_UNAVAILABLE,
+                );
+            }
+            return createAppointment(couponTx, appointmentData);
+        };
+
+        // R1: the slot lock already owns a transaction, so reuse it instead of
+        // opening a nested one (savepoints are not assumed to be supported).
         try {
             const appointment = couponId
-                ? await prisma.$transaction(async (tx) => {
-                      const coupon = await tx.coupon.findFirst({
-                          where: { id: couponId, tenantId },
-                      });
-                      if (!coupon) {
-                          throw new EntityNotFoundError("Coupon", couponId);
-                      }
-                      assertCouponRedeemable(
-                          toRedeemableCoupon(coupon),
-                          data.userId,
-                      );
-                      if (
-                          coupon.applicableServices.length > 0 &&
-                          !coupon.applicableServices.includes(data.serviceId)
-                      ) {
-                          throw new BusinessRuleViolationError(
-                              "Coupon not applicable to this service",
-                          );
-                      }
-                      if (
-                          coupon.applicableServices.length === 0 &&
-                          (coupon.applicableProducts.length > 0 ||
-                              coupon.applicableCategories.length > 0)
-                      ) {
-                          throw new BusinessRuleViolationError(
-                              "Coupon is only applicable to products",
-                          );
-                      }
-
-                      const service = await tx.service.findFirst({
-                          where: { id: data.serviceId, tenantId },
-                          select: { price: true },
-                      });
-                      if (!service) {
-                          throw new EntityNotFoundError(
-                              "Service",
-                              data.serviceId,
-                          );
-                      }
-                      const subtotal = new Prisma.Decimal(service.price);
-                      if (
-                          coupon.minPurchaseAmount !== null &&
-                          subtotal.lessThan(coupon.minPurchaseAmount)
-                      ) {
-                          throw new BusinessRuleViolationError(
-                              `Minimum purchase amount of $${coupon.minPurchaseAmount} required`,
-                          );
-                      }
-
-                      let discountAmount =
-                          coupon.type === "PERCENT"
-                              ? subtotal.mul(coupon.value).div(100)
-                              : new Prisma.Decimal(coupon.value);
-                      if (
-                          coupon.maxDiscountAmount !== null &&
-                          discountAmount.greaterThan(coupon.maxDiscountAmount)
-                      ) {
-                          discountAmount = new Prisma.Decimal(
-                              coupon.maxDiscountAmount,
-                          );
-                      }
-                      if (discountAmount.greaterThan(subtotal)) {
-                          discountAmount = subtotal;
-                      }
-                      const total = subtotal.minus(discountAmount);
-                      const appointmentData = {
-                          ...baseAppointmentData,
-                          discountAmount: discountAmount.toNumber(),
-                          subtotal: subtotal.toNumber(),
-                          total: total.toNumber(),
-                      };
-
-                      const couponsEnabled = await tx.tenantFeature.findFirst({
-                          where: {
-                              tenantId,
-                              enabled: true,
-                              feature: { key: "COUPONS" },
-                          },
-                          select: { id: true },
-                      });
-                      assertCouponsFeatureEnabled(couponsEnabled !== null);
-
-                      const usage = await tx.coupon.updateMany({
-                          where: {
-                              id: coupon.id,
-                              tenantId,
-                              usageCount: coupon.usageCount,
-                              usageLimit: coupon.usageLimit,
-                              updatedAt: coupon.updatedAt,
-                              active: true,
-                              expiresAt: { gt: new Date() },
-                              isLoyaltyTemplate: false,
-                              ...(coupon.isReward
-                                  ? {
-                                        ownerId: data.userId,
-                                        isReward: true,
-                                    }
-                                  : {
-                                        isReward: false,
-                                        OR: [
-                                            { ownerId: null },
-                                            { ownerId: data.userId },
-                                        ],
-                                    }),
-                          },
-                          data: { usageCount: { increment: 1 } },
-                      });
-                      if (usage.count === 0) {
-                          throw new BusinessRuleViolationError(
-                              "The coupon is not available for this appointment",
-                              BusinessErrorCodes.COUPON_UNAVAILABLE,
-                          );
-                      }
-                      return createAppointment(tx, appointmentData);
-                  })
-                : await createAppointment(prisma);
+                ? tx
+                    ? await redeemCoupon(tx as Prisma.TransactionClient)
+                    : await prisma.$transaction(redeemCoupon)
+                : await createAppointment(client);
 
             return this.mapToEntity(appointment);
         } catch (error: unknown) {
@@ -724,14 +724,32 @@ export class PrismaAppointmentRepository implements IAppointmentRepository {
         }
     }
 
+    async withSlotLock<T>(
+        tenantId: string,
+        staffId: string,
+        startTime: Date,
+        fn: (tx: AppointmentRepositoryTransaction) => Promise<T>,
+    ): Promise<T> {
+        const key = `${tenantId}|${staffId}|${startTime.toISOString().slice(0, 10)}`;
+        return prisma.$transaction(async (tx) => {
+            // Session-scoped for the transaction only: concurrent bookings for
+            // the same staff/date wait here, then re-check against committed
+            // rows before writing.
+            await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${key})::bigint)`;
+            return fn(tx);
+        });
+    }
+
     async checkAvailability(
         tenantId: string,
         staffId: string,
         startTime: Date,
         endTime: Date,
         excludeAppointmentId?: string,
+        tx?: AppointmentRepositoryTransaction,
     ): Promise<boolean> {
-        const conflictingAppointments = await prisma.appointment.findMany({
+        const client = (tx ?? prisma) as Prisma.TransactionClient;
+        const conflictingAppointments = await client.appointment.findMany({
             where: {
                 tenantId,
                 staffId,
