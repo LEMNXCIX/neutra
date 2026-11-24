@@ -6,7 +6,6 @@ import type {
     VerifyCallback,
 } from "passport-google-oauth20";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
-import { Strategy as TwitterStrategy } from "passport-twitter";
 import config from "@/config/index.config";
 import { isProduction } from "@/core/domain/constants";
 
@@ -20,8 +19,6 @@ const {
     callbackURLDev,
     facebookAppID,
     facebookAppSecret,
-    twitterConsumerID,
-    twitterConsumerSecret,
     githubClientID,
     githubClientSecret,
 } = config;
@@ -65,18 +62,6 @@ export const useFacebookStrategy = () => {
             clientSecret: facebookAppSecret as string,
             callbackURL: callbackUrl("facebook"),
             profileFields: ["id", "emails", "displayName", "name", "photos"],
-        },
-        getProfile,
-    );
-};
-
-export const useTwitterStrategy = () => {
-    return new TwitterStrategy(
-        {
-            consumerKey: twitterConsumerID as string,
-            consumerSecret: twitterConsumerSecret as string,
-            callbackURL: callbackUrl("twitter"),
-            includeEmail: true,
         },
         getProfile,
     );
