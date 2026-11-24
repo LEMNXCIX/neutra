@@ -219,7 +219,7 @@ if (require.main === module) {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { createNotificationWorker } =
         require("./infrastructure/workers/notification.worker");
-    createNotificationWorker({
+    const notificationWorker = createNotificationWorker({
         appointmentRepository: runtime.repositories.appointment,
         tenantRepository: runtime.repositories.tenant,
         emailService: runtime.services.email,
@@ -230,26 +230,53 @@ if (require.main === module) {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { createAppointmentReviewWorker } =
         require("./infrastructure/workers/appointment-review.worker");
-    createAppointmentReviewWorker({
+    const appointmentReviewWorker = createAppointmentReviewWorker({
         sweepAppointmentReviews: runtime.useCases.sweepAppointmentReviews,
         logger: runtime.providers.logger,
         connection: runtime.connections.redis,
         maintenanceQueue: runtime.queues.maintenance,
         schedule: scheduleAppointmentReviewSweep,
     });
+    runtime.registerWorkers([notificationWorker, appointmentReviewWorker]);
 
     const portNumber = typeof port === "string" ? parseInt(port, 10) : port;
-    app.listen(portNumber, "0.0.0.0", () => {
+    const server = app.listen(portNumber, "0.0.0.0", () => {
         logger.info(
             `Server started on http://localhost:${portNumber} (0.0.0.0)`,
         );
     });
+    runtime.registerServer(server);
 
     // Fire-and-forget: Redis is optional for serving HTTP. A failed
     // subscription is logged, never propagated to the server entrypoint.
     void runtime.startHoldExpiry().catch((err) => {
         logger.error("Failed to start hold expiry subscriber", err);
     });
+
+    // `server.close()` drains in-flight requests. The watchdog bounds that
+    // drain so a stuck connection can never keep the container alive forever.
+    let shuttingDown = false;
+    const shutdown = () => {
+        if (shuttingDown) return;
+        shuttingDown = true;
+
+        const forceExit = setTimeout(() => {
+            logger.error("Graceful shutdown timed out; forcing exit");
+            process.exit(1);
+        }, 5000);
+
+        void runtime
+            .close()
+            .catch((error) => {
+                logger.error("Error during graceful shutdown", error);
+            })
+            .finally(() => {
+                clearTimeout(forceExit);
+                process.exit(0);
+            });
+    };
+    process.once("SIGTERM", shutdown);
+    process.once("SIGINT", shutdown);
 }
 
 export default app;

@@ -1,3 +1,4 @@
+import type { Server } from "node:http";
 import { createClient } from "redis";
 import { checkDatabaseConnection, prisma } from "@/config/db.config";
 import config from "@/config/index.config";
@@ -50,6 +51,9 @@ import {
 } from "../services/queue.service";
 import { WhatsAppService } from "../services/whatsapp.service";
 import { WhatsAppBotService } from "../services/whatsapp-bot.service";
+
+/** Anything the entrypoint creates after the runtime that can be shut down. */
+type CloseHandle = { close(): Promise<void> | void };
 
 /** Build the concrete application runtime as one explicit composition graph. */
 export function createRuntime() {
@@ -173,6 +177,71 @@ export function createRuntime() {
     const startHoldExpiry = () =>
         startHoldExpirySubscriber(holdExpiryClient, eventBus);
 
+    // The HTTP server and the workers are owned by the entrypoint (creating
+    // them here would add side effects to every import of the runtime). They
+    // are attached once, then released together with every Redis client and
+    // queue by `close()`.
+    let server: Server | undefined;
+    let workers: CloseHandle[] = [];
+    let closing: Promise<void> | undefined;
+
+    const registerServer = (handle: Server): void => {
+        server = handle;
+    };
+
+    const registerWorkers = (handles: CloseHandle[]): void => {
+        workers = handles;
+    };
+
+    const close = (): Promise<void> => {
+        // SIGTERM and SIGINT are both registered; a second signal must not
+        // double-close an already closing set of connections.
+        if (closing) return closing;
+
+        closing = (async () => {
+            const steps: Array<() => Promise<void> | void> = [
+                () =>
+                    new Promise<void>((resolve) => {
+                        if (!server) {
+                            resolve();
+                            return;
+                        }
+                        // close() stops accepting connections and waits for
+                        // in-flight ones. The callback also fires when the
+                        // server was never listening, so never leave it hanging.
+                        server.close(() => resolve());
+                    }),
+                () => providers.cache.quit(),
+                async () => {
+                    await availabilityClient.quit();
+                },
+                async () => {
+                    await holdExpiryClient.quit();
+                },
+                ...workers.map((worker) => () => worker.close()),
+                ...Object.values(queues).map((queue) => () => queue.close()),
+            ];
+
+            // Start every step before awaiting so a slow HTTP drain cannot
+            // prevent Redis, workers or queues from being released.
+            const results = await Promise.allSettled(
+                steps.map(async (step) => {
+                    await step();
+                }),
+            );
+            for (const result of results) {
+                if (result.status === "rejected") {
+                    logger.error(
+                        "Error while closing a runtime resource",
+                        result.reason,
+                    );
+                }
+            }
+        })();
+
+        return closing;
+    };
+
     return {
         database: { prisma, checkDatabaseConnection },
         connections: {
@@ -187,6 +256,9 @@ export function createRuntime() {
         useCases,
         healthService,
         startHoldExpiry,
+        registerServer,
+        registerWorkers,
+        close,
     };
 }
 
