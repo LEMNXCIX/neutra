@@ -142,6 +142,11 @@ jobs:
       - name: Check web contract duplication
         run: node scripts/verify-web-contracts.mjs
 
+      # Task 9 acceptance gate: commons dist is already built above and no
+      # generated source has been written yet, so the clean-tree check passes.
+      - name: Verify availability DoD acceptance criteria
+        run: node scripts/verify-availability-dod.mjs
+
       - name: Check architecture boundaries
         run: bun run check:arch
 
