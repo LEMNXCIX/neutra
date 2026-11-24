@@ -112,6 +112,20 @@ failures, and the DoD gate does not try to "fix" them:
    checks snapshot consistency against `routes.json` (77 routes), not a real
    Next-vs-Start byte-for-byte comparison. See `apps/web/README.md`.
 
+## Realtime availability — holds are UX-only
+
+The booking storefront acquires a short-lived hold on slot selection and shows
+other owners' holds via tenant-scoped SSE. The hold is **not** an authorization
+or a reservation guarantee: the API does not validate `holdKey` ownership on
+appointment creation and does not release holds itself. The authoritative
+protection is the transactional slot lock (HTTP 409 on a lost race); the client
+releases its own hold on success or on a 409 and refetches availability. Holds
+also expire through Redis TTL. The two `/api/holds` BFF routes keep their source
+under `apps/web/src/app/api/holds/**` and their generated form under
+`apps/web/src/routes/api/holds/**`; regenerate with
+`node apps/web/scripts/generate-api-routes.mjs` instead of editing generated
+files by hand.
+
 ## Follow-ups
 
 - **Security debt (accepted WARN, not remediated here).** `npm.audit` in the

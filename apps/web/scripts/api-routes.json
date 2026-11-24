@@ -257,6 +257,18 @@
         ]
     },
     {
+        "path": "/api/holds",
+        "methods": [
+            "POST"
+        ]
+    },
+    {
+        "path": "/api/holds/$key",
+        "methods": [
+            "DELETE"
+        ]
+    },
+    {
         "path": "/api/loyalty/admin/campaigns",
         "methods": [
             "GET",

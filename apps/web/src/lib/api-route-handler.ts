@@ -953,6 +953,72 @@ const webBffHandlers: Record<string, BffHandler> = {
         }
     },
 
+    // ---- short-lived holds (UX only; the slot lock is authoritative) -------
+    "POST /api/holds": async ({ request }) => {
+        const startTime = Date.now();
+        const logContext = logger.createContext("/holds", "POST");
+        try {
+            const body = await request.json().catch(() => undefined);
+            const response = await fetch(backendUrl("/holds"), {
+                method: "POST",
+                headers: backendProxyHeaders(request, true),
+                body: JSON.stringify(body),
+                cache: "no-store",
+            });
+            const data = await readJsonResponse(response);
+            logger.info(
+                logger.withResponse(
+                    logContext,
+                    data,
+                    response.status,
+                    Date.now() - startTime,
+                ),
+                `API Response: Hold ${response.ok ? "acquired" : "conflict"}`,
+            );
+            // The API sets `hold_owner` here; the browser needs that cookie
+            // for a later owner-scoped release, so never swallow Set-Cookie.
+            return withBackendCookies(data, response.status, response);
+        } catch (error) {
+            logger.error(
+                logger.withError(logContext, error, Date.now() - startTime),
+                `Hold Error: ${error instanceof Error ? error.message : "unknown"}`,
+            );
+            return createErrorResponse(
+                "No pudimos reservar el horario",
+                500,
+                logContext.traceId,
+            );
+        }
+    },
+
+    "DELETE /api/holds/$key": async ({ request, params }) => {
+        const startTime = Date.now();
+        const key = params?.key ?? "";
+        const logContext = logger.createContext(`/holds/${key}`, "DELETE");
+        try {
+            const response = await fetch(
+                backendUrl(`/holds/${encodeURIComponent(key)}`),
+                {
+                    method: "DELETE",
+                    headers: backendProxyHeaders(request),
+                    cache: "no-store",
+                },
+            );
+            const data = await readJsonResponse(response);
+            return withBackendCookies(data, response.status, response);
+        } catch (error) {
+            logger.error(
+                logger.withError(logContext, error, Date.now() - startTime),
+                `Hold Error: ${error instanceof Error ? error.message : "unknown"}`,
+            );
+            return createErrorResponse(
+                "No pudimos liberar el horario",
+                500,
+                logContext.traceId,
+            );
+        }
+    },
+
     // ---- order statuses / user orders --------------------------------------
     "GET /api/admin/orders/statuses": async ({ request }) => {
         try {

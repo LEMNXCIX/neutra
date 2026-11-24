@@ -39,7 +39,7 @@ try {
   console.error(`FAIL: cannot read ${apiRoutesDir}: ${error.message}`);
   process.exit(1);
 }
-assert(routeCount === 77, `expected 77 route.ts files under src/routes/api, got ${routeCount}`);
+assert(routeCount === 79, `expected 79 route.ts files under src/routes/api, got ${routeCount}`);
 
 const log = execFileSync("git", ["log", "--format=%H"], {
   cwd: root,

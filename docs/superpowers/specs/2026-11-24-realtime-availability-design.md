@@ -88,7 +88,7 @@ Nota: `@neutra/commons` sigue siendo isomórfico; los eventos son tipos/Zod puro
 
 ### Fase C — Integración en el storefront de citas
 9. El wizard adquiere un hold al seleccionar slot; deshabilita slots con hold ajeno y muestra "alguien está reservando este horario".
-10. Al confirmar: la API valida que el hold pertenezca al `ownerId`, ejecuta la transacción de la Fase A y libera el hold.
+10. Al confirmar: el cliente envía el `holdKey` en el body y la API ejecuta la transacción de la Fase A. **El hold es solo UX**: la API NO valida la propiedad del hold ni lo libera. La garantía autoritativa es el lock transaccional de la Fase A (Task 2), que responde 409 a cualquier disputa real; el cliente libera su propio hold tanto al crear con éxito como ante un 409, y recarga disponibilidad en ese caso. `hold_owner` es identidad de UX, no autorización.
 11. Suscripción al SSE con invalidación keyed de la query de disponibilidad; re-fetch de seguridad cuando llega cualquier evento.
 
 ### Fase D — Integración en inventario de tienda (independiente)
@@ -134,6 +134,7 @@ Nota: `@neutra/commons` sigue siendo isomórfico; los eventos son tipos/Zod puro
 | --- | --- |
 | Lock por día no cubre citas que cruzan medianoche | La clave del lock usa `(tenantId, staffId, día)`; el re-check de solapamiento usa start/end reales, por lo que el lock solo serializa y la corrección la da el re-check transaccional. |
 | Redis como punto único de fallo para holds | TTL nativo; si Redis cae, la API sigue protegida por el lock transaccional (citas) y el decremento atómico (stock). El hold es UX. |
+| Validación de propiedad del hold en la API | **No se implementa**: el `holdKey` viaja en el body pero la API no comprueba propiedad ni libera el hold (evita acoplar el módulo de citas al proveedor de holds). La garantía es el lock transaccional de Fase A → 409; el cliente libera su propio hold al confirmar (éxito o 409). `hold_owner` es solo identidad UX. |
 | Holds abandonados inflando `held` | TTL corto (2 min, configurable) + `countActive` ignora expirados; sin job de limpieza (Redis expira solo). |
 | SSE process-local multi-réplica | Bridge Redis + sticky routing documentado; re-fetch de seguridad en el cliente. |
 | Stock sin restock (D8) | Deuda explícita; no se resuelve en este corte. |

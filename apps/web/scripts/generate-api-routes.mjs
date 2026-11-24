@@ -15,6 +15,13 @@
  *
  * It deliberately does not delete `src/app/api` — that happens only after the
  * inventory test confirms the generated set matches the original set exactly.
+ *
+ * Most Next source files were removed after the migration, so the already
+ * generated routes are part of the inventory too: regeneration overlays the
+ * current source files onto the existing manifest and keeps every generated
+ * file still recorded there. New endpoints that ship with a source file (e.g.
+ * the two `/api/holds` BFF routes) are added; genuinely stale generated files,
+ * i.e. ones absent from the manifest and without a source, are still removed.
  */
 import { execFileSync } from "node:child_process";
 import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
@@ -254,7 +261,16 @@ async function main() {
         throw new Error(`No route.ts files found under ${SOURCE_API}`);
     }
 
-    const manifest = [];
+    // The Next sources for the 77 original routes were removed after the
+    // migration. Seed the inventory from the committed manifest so those
+    // generated routes survive a regeneration; source files only overlay (or
+    // add) their own entries.
+    const existingManifest = JSON.parse(
+        await readFile(MANIFEST, "utf8").catch(() => "[]"),
+    );
+    const manifestByPath = new Map(
+        existingManifest.map((entry) => [entry.path, entry]),
+    );
     const outputs = [];
 
     for (const file of files.sort()) {
@@ -270,7 +286,7 @@ async function main() {
             throw new Error(`No HTTP handlers found in ${file}`);
         }
 
-        manifest.push({
+        manifestByPath.set(apiPath, {
             path: apiPath,
             methods: handlers.map((h) => h.method),
         });
@@ -285,7 +301,9 @@ async function main() {
         });
     }
 
-    manifest.sort((a, b) => a.path.localeCompare(b.path));
+    const manifest = [...manifestByPath.values()].sort((a, b) =>
+        a.path.localeCompare(b.path),
+    );
     await mkdir(path.dirname(MANIFEST), { recursive: true });
     await writeFile(MANIFEST, `${JSON.stringify(manifest, null, 4)}\n`);
 
@@ -294,11 +312,20 @@ async function main() {
         await writeFile(file, content);
     }
 
-    // Remove any stale generated file that no longer has a source counterpart.
+    // Keep generated files that still have a source counterpart OR are still
+    // recorded in the manifest (the migration left many without sources).
+    // Only files absent from both are genuinely stale.
+    const keepFiles = new Set(outputs.map((entry) => entry.file));
+    const keepPaths = new Set(manifest.map((entry) => entry.path));
     const generated = await routeFiles(OUTPUT_API);
-    const keep = new Set(outputs.map((entry) => entry.file));
     for (const file of generated) {
-        if (!keep.has(file)) await rm(file);
+        const segments = path
+            .relative(OUTPUT_API, path.dirname(file))
+            .split(path.sep)
+            .filter(Boolean);
+        const apiPath = `/api${segments.length ? `/${segments.join("/")}` : ""}`;
+        if (keepFiles.has(file) || keepPaths.has(apiPath)) continue;
+        await rm(file);
     }
 
     // Keep regeneration idempotent with the repo's formatter.

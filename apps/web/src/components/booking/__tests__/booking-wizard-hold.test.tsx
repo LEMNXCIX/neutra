@@ -311,4 +311,35 @@ describe("booking wizard appointment holds", () => {
         });
         expect(shared.push).not.toHaveBeenCalled();
     });
+
+    it("releases its own hold after a successful create", async () => {
+        const user = await renderWizardAtSchedule();
+
+        await user.click(
+            screen.getByRole("button", { name: new RegExp(shared.slotA) }),
+        );
+        await waitFor(() =>
+            expect(
+                screen.getByRole("button", { name: new RegExp(shared.slotA) }),
+            ).toHaveAttribute("data-slot-state", "mine"),
+        );
+        await user.click(
+            screen.getByRole("button", { name: /Revisar detalles/ }),
+        );
+        await user.click(
+            screen.getByRole("button", { name: /Confirmar Reserva/ }),
+        );
+
+        await waitFor(() =>
+            expect(shared.apiClient).toHaveBeenCalledWith(
+                `/holds/${encodeURIComponent(holdKeyFor(shared.slotA))}`,
+                { method: "DELETE" },
+            ),
+        );
+        await waitFor(() =>
+            expect(shared.push).toHaveBeenCalledWith(
+                "/appointments?success=true",
+            ),
+        );
+    });
 });

@@ -1057,6 +1057,19 @@ export function BookingWizard({
                 holdKey: myHold?.key,
             };
             await bookingService.createAppointment(appointmentData);
+            // UX-only hold: release it ourselves on success too (the API never
+            // does). TTL would clean it up otherwise, but an immediate release
+            // keeps the slot selectable again for this browser.
+            const acquiredKey = myHold?.key;
+            if (acquiredKey) {
+                try {
+                    await bookingService.releaseHold(acquiredKey);
+                } catch {
+                    // Best effort; the Redis TTL is the backstop.
+                }
+                ownHoldKeysRef.current.delete(acquiredKey);
+                setMyHold(null);
+            }
             router.push("/appointments?success=true");
         } catch (err: any) {
             if (isConflictError(err)) {

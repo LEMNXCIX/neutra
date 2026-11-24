@@ -66,14 +66,14 @@ describe("generated API route inventory", () => {
         expect(generatedFiles()).toHaveLength(readManifest().length);
     });
 
-    it("records the original 75 routes plus the two admin logs routes", () => {
-        expect(readManifest()).toHaveLength(77);
+    it("records the original 75 routes, two admin logs routes and two hold routes", () => {
+        expect(readManifest()).toHaveLength(79);
     });
 
     it("matches the original path+method set exactly", () => {
         const expected = manifestKeys();
         const actual = generatedKeys();
-        expect(expected.size).toBeGreaterThan(77);
+        expect(expected.size).toBeGreaterThan(79);
         expect([...actual].sort()).toEqual([...expected].sort());
     });
 
