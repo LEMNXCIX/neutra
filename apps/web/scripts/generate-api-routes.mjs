@@ -16,12 +16,14 @@
  * It deliberately does not delete `src/app/api` — that happens only after the
  * inventory test confirms the generated set matches the original set exactly.
  *
- * Most Next source files were removed after the migration, so the already
- * generated routes are part of the inventory too: regeneration overlays the
- * current source files onto the existing manifest and keeps every generated
- * file still recorded there. New endpoints that ship with a source file (e.g.
- * the two `/api/holds` BFF routes) are added; genuinely stale generated files,
- * i.e. ones absent from the manifest and without a source, are still removed.
+ * Most Next source files were removed after the migration, so the generated
+ * files still on disk are the seed of the inventory: their route paths and
+ * handler methods are re-read on every run, then the remaining source files
+ * overlay (or add) their own entries. The manifest therefore reflects both
+ * additions and deletions instead of preserving removed routes forever.
+ *
+ * The generation logic is exported so the inventory tests can run it against
+ * a temporary copy of the tree; the CLI entry point keeps the defaults below.
  */
 import { execFileSync } from "node:child_process";
 import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
@@ -138,7 +140,13 @@ function normalizePathSegment(segment) {
 }
 
 async function routeFiles(dir) {
-    const entries = await readdir(dir, { withFileTypes: true });
+    let entries;
+    try {
+        entries = await readdir(dir, { withFileTypes: true });
+    } catch (error) {
+        if (error.code === "ENOENT") return [];
+        throw error;
+    }
     const files = await Promise.all(
         entries.map(async (entry) => {
             const full = path.join(dir, entry.name);
@@ -147,6 +155,28 @@ async function routeFiles(dir) {
         }),
     );
     return files.flat();
+}
+
+/** Rebuild a manifest entry from an already generated route file. Generated
+ *  files carry the path in `createFileRoute(...)` and the exported methods
+ *  under `server.handlers`, so they can be inventoried without their source. */
+async function manifestEntryFromGenerated(file, outputApi) {
+    const source = await readFile(file, "utf8");
+    const route = source.match(
+        /createFileRoute\(\s*["']([^"']+)["']\s*,?\s*\)/,
+    );
+    const segments = path
+        .relative(outputApi, path.dirname(file))
+        .split(path.sep)
+        .filter(Boolean);
+    const apiPath =
+        route?.[1] ?? `/api${segments.length ? `/${segments.join("/")}` : ""}`;
+    return {
+        path: apiPath,
+        methods: METHODS.filter((method) =>
+            new RegExp(`(?:^|\\n)\\s*${method}\\s*:`, "m").test(source),
+        ),
+    };
 }
 
 function parseHandlers(source, apiPath) {
@@ -255,27 +285,36 @@ function renderRoute({ apiPath, handlers, endpointDeclaration }) {
     return lines.join("\n");
 }
 
-async function main() {
-    const files = await routeFiles(SOURCE_API);
+export async function generateApiRoutes({
+    sourceApi = SOURCE_API,
+    outputApi = OUTPUT_API,
+    manifestPath = MANIFEST,
+    runFormatter = true,
+} = {}) {
+    const files = await routeFiles(sourceApi);
     if (files.length === 0) {
-        throw new Error(`No route.ts files found under ${SOURCE_API}`);
+        throw new Error(`No route.ts files found under ${sourceApi}`);
     }
 
-    // The Next sources for the 77 original routes were removed after the
-    // migration. Seed the inventory from the committed manifest so those
-    // generated routes survive a regeneration; source files only overlay (or
-    // add) their own entries.
-    const existingManifest = JSON.parse(
-        await readFile(MANIFEST, "utf8").catch(() => "[]"),
+    // Most Next sources are gone, so the generated files still on disk are the
+    // seed of the inventory: each contributes its path and handler methods.
+    // The remaining sources overlay (or add) their own entries. Seeding from
+    // disk rather than from the committed manifest lets regeneration record
+    // deletions as well as additions.
+    const generatedFiles = await routeFiles(outputApi);
+    const generatedEntries = await Promise.all(
+        generatedFiles.map((file) =>
+            manifestEntryFromGenerated(file, outputApi),
+        ),
     );
     const manifestByPath = new Map(
-        existingManifest.map((entry) => [entry.path, entry]),
+        generatedEntries.map((entry) => [entry.path, entry]),
     );
     const outputs = [];
 
     for (const file of files.sort()) {
         const source = await readFile(file, "utf8");
-        const relative = path.relative(SOURCE_API, path.dirname(file));
+        const relative = path.relative(sourceApi, path.dirname(file));
         const segments = relative
             .split(path.sep)
             .filter(Boolean)
@@ -290,7 +329,7 @@ async function main() {
             path: apiPath,
             methods: handlers.map((h) => h.method),
         });
-        const outputFile = path.join(OUTPUT_API, ...segments, "route.ts");
+        const outputFile = path.join(outputApi, ...segments, "route.ts");
         outputs.push({
             file: outputFile,
             content: renderRoute({
@@ -304,23 +343,23 @@ async function main() {
     const manifest = [...manifestByPath.values()].sort((a, b) =>
         a.path.localeCompare(b.path),
     );
-    await mkdir(path.dirname(MANIFEST), { recursive: true });
-    await writeFile(MANIFEST, `${JSON.stringify(manifest, null, 4)}\n`);
+    await mkdir(path.dirname(manifestPath), { recursive: true });
+    await writeFile(manifestPath, `${JSON.stringify(manifest, null, 4)}\n`);
 
     for (const { file, content } of outputs) {
         await mkdir(path.dirname(file), { recursive: true });
         await writeFile(file, content);
     }
 
-    // Keep generated files that still have a source counterpart OR are still
-    // recorded in the manifest (the migration left many without sources).
-    // Only files absent from both are genuinely stale.
+    // The manifest is now seeded from the generated files themselves, so this
+    // is only a safety net: keep source-backed files and anything still
+    // recorded in the manifest, remove files absent from both.
     const keepFiles = new Set(outputs.map((entry) => entry.file));
     const keepPaths = new Set(manifest.map((entry) => entry.path));
-    const generated = await routeFiles(OUTPUT_API);
+    const generated = await routeFiles(outputApi);
     for (const file of generated) {
         const segments = path
-            .relative(OUTPUT_API, path.dirname(file))
+            .relative(outputApi, path.dirname(file))
             .split(path.sep)
             .filter(Boolean);
         const apiPath = `/api${segments.length ? `/${segments.join("/")}` : ""}`;
@@ -329,17 +368,29 @@ async function main() {
     }
 
     // Keep regeneration idempotent with the repo's formatter.
-    execFileSync("npx", ["biome", "format", "--write", OUTPUT_API], {
-        cwd: ROOT,
-        stdio: "inherit",
-    });
+    if (runFormatter) {
+        execFileSync("npx", ["biome", "format", "--write", outputApi], {
+            cwd: ROOT,
+            stdio: "inherit",
+        });
+    }
 
     console.log(
         `Generated ${outputs.length} routes and ${manifest.length} manifest entries.`,
     );
+    return manifest;
 }
 
-main().catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
-});
+function main() {
+    return generateApiRoutes();
+}
+
+if (
+    process.argv[1] &&
+    path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
+    main().catch((error) => {
+        console.error(error);
+        process.exitCode = 1;
+    });
+}
